@@ -124,7 +124,7 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
         System: ${config.ai.systemPrompt}
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -136,9 +136,10 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
           }],
           system_instruction: {
             parts: [{ text: `
-              SYSTEM BOOT: LOADER v2.5 (STABLE)
+              SYSTEM BOOT: LOADER v3.0 (ULTRA-STABLE)
+              Identity: ${assistantName}. Official assistant for Ahmed Helal.
               ${safetyGuardrails}
-              Tone: ${config.ai.tone}. Professional. Under 60 words.
+              Constraint: Direct answers, under 60 words. Speak naturally.
               ${TRANSLATIONS[lang].guardLanguage}
             ` }]
           }
