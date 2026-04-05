@@ -37,30 +37,37 @@ export const ContactCTA = ({ lang, id }: ContactCTAProps) => {
              {contact.subtitle[lang]}
           </motion.p>
 
-          <motion.div
-             initial={{ opacity: 0, y: 20 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true }}
-             transition={{ delay: 0.4 }}
-             className="flex flex-col sm:flex-row items-center justify-center gap-6"
-          >
-             <Button 
-                variant="whatsapp" 
-                className="w-full sm:w-auto h-16 text-lg flex items-center justify-center gap-3 px-12"
-                onClick={() => window.open(socials.whatsapp, '_blank')}
-             >
-                <MessageCircle className="w-6 h-6 fill-white" />
-                {contact.whatsappLabel[lang]}
-             </Button>
-             <Button 
-                variant="secondary" 
-                className="w-full sm:w-auto h-16 text-lg flex items-center justify-center gap-3 px-10 border-white/20 hover:border-white/40"
-                onClick={() => window.open(`mailto:${socials.email}`, '_blank')}
-             >
-                <Mail className="w-5 h-5 opacity-60" />
-                {contact.emailLabel[lang]}
-             </Button>
-          </motion.div>
+     <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.4 }}
+        className="flex flex-col sm:row items-center justify-center gap-6"
+     >
+        <Button 
+           variant="whatsapp" 
+           className="w-full sm:w-auto h-16 text-lg flex items-center justify-center gap-3 px-12"
+           onClick={() => {
+              const wa = socials.find(s => s.platform === 'whatsapp')?.url;
+              if (wa) window.open(wa, '_blank');
+           }}
+        >
+           <MessageCircle className="w-6 h-6 fill-white" />
+           {contact.whatsappLabel[lang]}
+        </Button>
+        <Button 
+           variant="secondary" 
+           className="w-full sm:w-auto h-16 text-lg flex items-center justify-center gap-3 px-10 border-white/20 hover:border-white/40"
+           onClick={() => {
+              const mail = socials.find(s => s.platform === 'email')?.url;
+              const cleanMail = mail?.replace('mailto:', '');
+              if (cleanMail) window.open(`mailto:${cleanMail}`, '_blank');
+           }}
+        >
+           <Mail className="w-5 h-5 opacity-60" />
+           {contact.emailLabel[lang]}
+        </Button>
+     </motion.div>
        </div>
     </section>
   );
