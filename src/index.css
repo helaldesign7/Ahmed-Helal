@@ -1,0 +1,96 @@
+@import url('https://fonts.cdnfonts.com/css/vazirmatn');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@700;800;900&family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "Outfit", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "Space Mono", monospace;
+  
+  /* Primary Font: Vazirmatn (User Requested) */
+  --font-arabic: "Vazirmatn", sans-serif;
+
+  --color-primary-black: #050505;
+  --color-gh-dark: #0d1117;
+  --color-accent-violet: #8b5cf6;
+  --color-accent-blue: #3b82f6;
+
+  --z-999: 999;
+  --z-50: 50;
+  --z-10: 10;
+  --z-1: 1;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin-inline-start: initial;
+    margin-inline-end: initial;
+  }
+
+  body {
+    background-color: var(--color-primary-black);
+    color: white;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Global Arabic Typography - Powered by Vazirmatn */
+  .rtl {
+    direction: rtl;
+    font-family: var(--font-arabic) !important;
+  }
+
+  .rtl, .rtl body, .rtl h1, .rtl h2, .rtl h3, .rtl h4, .rtl .font-heading, .rtl .font-sans, .rtl .font-mono {
+    font-family: var(--font-arabic) !important;
+  }
+
+  .rtl h1, .rtl h2, .rtl h3, .rtl .font-heading {
+    letter-spacing: normal;
+    line-height: 1.25;
+  }
+
+  /* Glass Game-Style Buttons */
+  .btn-glass {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(48px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    transition: all 500ms cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5);
+  }
+
+  .btn-glass:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 15px 35px -10px rgba(139, 92, 246, 0.4);
+  }
+
+  .force-ltr {
+    direction: ltr !important;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.05em;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-primary-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}

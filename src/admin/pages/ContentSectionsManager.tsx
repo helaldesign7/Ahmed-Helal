@@ -1,0 +1,215 @@
+import { useState } from 'react';
+import { LayoutList, GripVertical, ArrowUp, ArrowDown, Image as ImageIcon, MessageSquareQuote, Link as LinkIcon, Edit3, X } from 'lucide-react';
+import { useAdmin } from '../../contexts/useAdmin';
+import { DictionaryEditor } from '../components/DictionaryEditor';
+import { TestimonialsManager } from '../components/sub-managers/TestimonialsManager';
+import { ClientLogosManager } from '../components/sub-managers/ClientLogosManager';
+import { SocialLinksManager } from '../components/sub-managers/SocialLinksManager';
+import { useOutletContext } from 'react-router-dom';
+
+export const ContentSectionsManager = () => {
+  const { sections, toggleVisibility, moveSection } = useAdmin();
+  const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
+  const [activeEditor, setActiveEditor] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<'testimonials' | 'logos' | 'social' | null>(null);
+
+  const isRtl = lang === 'ar';
+
+  const t = {
+    en: {
+      title: 'Sections & Content',
+      subtitle: 'Manage page layout, testimonials, and brand assets',
+      blueprint: 'Page Blueprint',
+      status: {
+        visible: 'Visible',
+        hidden: 'Hidden'
+      },
+      actions: {
+        edit: 'Edit Texts',
+        close: 'Close Texts'
+      },
+      subManagers: {
+        testimonials: {
+          title: 'Testimonials',
+          subtitle: 'Global Reputation Matrix',
+          manage: 'Manage'
+        },
+        logos: {
+          title: 'Client Logos',
+          subtitle: 'Marquee Visual Assets',
+          manage: 'Manage'
+        },
+        social: {
+          title: 'Social Icons & Links',
+          subtitle: 'External Connectivity Nodes',
+          manage: 'Manage'
+        }
+      },
+      layer: 'layer'
+    },
+    ar: {
+      title: 'الأقسام والمحتوى',
+      subtitle: 'إدارة تخطيط الصفحة، التوصيات، وأصول العلامة التجارية',
+      blueprint: 'مخطط الصفحة الرئيسي',
+      status: {
+        visible: 'ظاهر',
+        hidden: 'مخفي'
+      },
+      actions: {
+        edit: 'تعديل النصوص',
+        close: 'إغلاق المحرر'
+      },
+      subManagers: {
+        testimonials: {
+          title: 'توصيات العملاء',
+          subtitle: 'مصفوفة السمعة العالمية',
+          manage: 'إدارة'
+        },
+        logos: {
+          title: 'شعارات العملاء',
+          subtitle: 'أصول بصرية متميزة',
+          manage: 'إدارة'
+        },
+        social: {
+          title: 'أيقونات وروابط التواصل',
+          subtitle: 'عقد الاتصال الخارجي',
+          manage: 'إدارة'
+        }
+      },
+      layer: 'طبقة'
+    }
+  };
+
+  return (
+    <div className={`space-y-8 pb-10 ${isRtl ? 'text-right' : ''}`}>
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <div>
+          <h1 className="text-3xl font-black uppercase tracking-wider text-white mb-2">{t[lang].title}</h1>
+          <p className="text-white/40 text-sm font-mono tracking-widest uppercase">{t[lang].subtitle}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column: Sections Reordering & Visibility */}
+        <div className="bg-[#0C0C0C] border border-white/5 rounded-2xl p-6">
+          <h2 className={`text-sm font-black uppercase tracking-widest text-white border-b border-white/5 pb-4 mb-6 flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <LayoutList className="w-4 h-4 text-accent-violet" /> {t[lang].blueprint}
+          </h2>
+          
+          <div className="space-y-3">
+            {sections.map((section, index) => (
+              <div key={section.id} className="bg-black/20 border border-white/5 rounded-xl overflow-hidden transition-all duration-300">
+                <div className={`flex items-center justify-between p-3 bg-white/2 hover:bg-white/5 transition-colors group ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                    <GripVertical className="w-4 h-4 text-white/20 group-hover:text-white/50" />
+                    <div className={`flex flex-col ${isRtl ? 'text-right' : ''}`}>
+                      <span className="text-sm font-bold text-white mb-0.5">{section.name}</span>
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-accent-violet">{section.type} {t[lang].layer}</span>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                    <button onClick={() => moveSection(section.id, 'up')} disabled={index === 0} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                       <ArrowUp className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => moveSection(section.id, 'down')} disabled={index === sections.length - 1} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                       <ArrowDown className="w-3 h-3" />
+                    </button>
+                    <div className="w-px h-6 bg-white/10 mx-2"></div>
+                    <button 
+                      onClick={() => toggleVisibility(section.id)}
+                      className={`min-w-[70px] px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-colors border ${section.isVisible ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
+                    >
+                      {section.isVisible ? t[lang].status.visible : t[lang].status.hidden}
+                    </button>
+                    <button 
+                      onClick={() => setActiveEditor(activeEditor === section.id ? null : section.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-2 ${isRtl ? 'mr-2' : 'ml-2'} ${activeEditor === section.id ? 'bg-accent-violet text-white border-accent-violet/50' : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                    >
+                      {activeEditor === section.id ? <X className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                      {activeEditor === section.id ? t[lang].actions.close : t[lang].actions.edit}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Magic Dictionary Accordion */}
+                {activeEditor === section.id && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t border-white/5">
+                    <DictionaryEditor sectionId={section.id} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Other Minor Content CMS */}
+        <div className="space-y-6">
+           <div 
+             className="bg-[#0C0C0C] border border-white/5 rounded-2xl p-6 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-shadow cursor-pointer"
+             onClick={() => setActiveModal('testimonials')}
+           >
+              <div className={`flex items-start justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg bg-accent-violet/10 flex items-center justify-center border border-accent-violet/20">
+                    <MessageSquareQuote className="w-5 h-5 text-accent-violet" />
+                  </div>
+                  <div className={isRtl ? 'text-right' : ''}>
+                    <h3 className="text-sm font-bold text-white tracking-widest uppercase">{t[lang].subManagers.testimonials.title}</h3>
+                    <p className="text-[10px] font-mono text-white/40 uppercase mt-1">{t[lang].subManagers.testimonials.subtitle}</p>
+                  </div>
+                </div>
+                <button className={`text-[10px] font-mono text-accent-violet uppercase hover:underline ${isRtl ? 'rotate-180' : ''}`}>
+                  {t[lang].subManagers.testimonials.manage} &rarr;
+                </button>
+              </div>
+           </div>
+
+           <div 
+             className="bg-[#0C0C0C] border border-white/5 rounded-2xl p-6 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-shadow cursor-pointer"
+             onClick={() => setActiveModal('logos')}
+           >
+              <div className={`flex items-start justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg bg-accent-violet/10 flex items-center justify-center border border-accent-violet/20">
+                    <ImageIcon className="w-5 h-5 text-accent-violet" />
+                  </div>
+                  <div className={isRtl ? 'text-right' : ''}>
+                    <h3 className="text-sm font-bold text-white tracking-widest uppercase">{t[lang].subManagers.logos.title}</h3>
+                    <p className="text-[10px] font-mono text-white/40 uppercase mt-1">{t[lang].subManagers.logos.subtitle}</p>
+                  </div>
+                </div>
+                <button className={`text-[10px] font-mono text-accent-violet uppercase hover:underline ${isRtl ? 'rotate-180' : ''}`}>
+                  {t[lang].subManagers.logos.manage} &rarr;
+                </button>
+              </div>
+           </div>
+
+           <div 
+             className="bg-[#0C0C0C] border border-white/5 rounded-2xl p-6 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-shadow cursor-pointer"
+             onClick={() => setActiveModal('social')}
+           >
+              <div className={`flex items-start justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg bg-accent-violet/10 flex items-center justify-center border border-accent-violet/20">
+                    <LinkIcon className="w-5 h-5 text-accent-violet" />
+                  </div>
+                  <div className={isRtl ? 'text-right' : ''}>
+                    <h3 className="text-sm font-bold text-white tracking-widest uppercase">{t[lang].subManagers.social.title}</h3>
+                    <p className="text-[10px] font-mono text-white/40 uppercase mt-1">{t[lang].subManagers.social.subtitle}</p>
+                  </div>
+                </div>
+                <button className={`text-[10px] font-mono text-accent-violet uppercase hover:underline ${isRtl ? 'rotate-180' : ''}`}>
+                  {t[lang].subManagers.social.manage} &rarr;
+                </button>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* Modals with Lang Support */}
+      {activeModal === 'testimonials' && <TestimonialsManager lang={lang} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'logos' && <ClientLogosManager lang={lang} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'social' && <SocialLinksManager lang={lang} onClose={() => setActiveModal(null)} />}
+    </div>
+  );
+};
