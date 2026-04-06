@@ -17,8 +17,8 @@
   --color-gh-dark: #0d1117;
 
   /* Dynamic Effects */
-  --accent-glow: rgba(var(--accent-rgb, 139, 92, 246), 0.3);
-  --accent-soft: rgba(var(--accent-rgb, 139, 92, 246), 0.1);
+  --accent-glow: rgba(var(--accent-rgb), 0.3);
+  --accent-soft: rgba(var(--accent-rgb), 0.1);
   --radius-global: var(--border-radius, 16px);
 
   --z-999: 999;
@@ -74,7 +74,7 @@
   .btn-glass:hover {
     border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 15px 35px -10px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 15px 35px -10px rgba(var(--accent-rgb), 0.4);
   }
 
   .force-ltr {

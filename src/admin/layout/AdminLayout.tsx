@@ -7,7 +7,15 @@ import { useAdmin } from '../../contexts/useAdmin';
 
 export const AdminLayout = () => {
   const [showMediaManager, setShowMediaManager] = useState(false);
-  const { notifications, markNotificationAsRead, clearNotifications } = useAdmin();
+  const { 
+    notifications, 
+    markNotificationAsRead, 
+    clearNotifications,
+    isDirty,
+    saveStatus,
+    saveChanges,
+    cancelChanges
+  } = useAdmin();
   const navigate = useNavigate();
   const [lang, setLang] = useState<'en' | 'ar'>(() => (localStorage.getItem('language') as 'en' | 'ar') || 'en');
   
@@ -22,7 +30,13 @@ export const AdminLayout = () => {
       markRead: 'Mark all as read',
       media: 'Media',
       status: 'System OK',
-      switchLang: 'العربية'
+      switchLang: 'العربية',
+      unsaved: 'Unsaved Changes Found',
+      save: 'Save Changes',
+      saving: 'Saving...',
+      saved: 'Saved',
+      error: 'Save Failed',
+      reset: 'Discard'
     },
     ar: {
       viewSite: 'عرض الموقع',
@@ -32,7 +46,13 @@ export const AdminLayout = () => {
       markRead: 'تحديد الكل كمقروء',
       media: 'الوسائط',
       status: 'النظام متاح',
-      switchLang: 'English'
+      switchLang: 'English',
+      unsaved: 'يوجد تغييرات غير محفوظة',
+      save: 'حفظ التغييرات',
+      saving: 'جاري الحفظ...',
+      saved: 'تم الحفظ',
+      error: 'فشل الحفظ',
+      reset: 'إلغاء'
     }
   };
 
@@ -42,15 +62,6 @@ export const AdminLayout = () => {
   };
 
   const isRtl = lang === 'ar';
-
-  // Toggle language and persist
-  const toggleLanguage = () => {
-    const newLang = lang === 'en' ? 'ar' : 'en';
-    setLang(newLang);
-    localStorage.setItem('language', newLang);
-    // Notify application of storage change
-    window.dispatchEvent(new Event('storage'));
-  };
 
   return (
     <div className={`flex h-screen bg-primary-black text-white font-sans overflow-hidden ${isRtl ? 'rtl font-arabic' : 'ltr'}`}>
@@ -69,7 +80,12 @@ export const AdminLayout = () => {
              
              {/* Language Switcher */}
              <button 
-                onClick={toggleLanguage}
+                onClick={() => {
+                  const nl = lang === 'en' ? 'ar' : 'en';
+                  setLang(nl);
+                  localStorage.setItem('language', nl);
+                  window.dispatchEvent(new Event('storage'));
+                }}
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-accent-violet/30 transition-all shadow-lg ${isRtl ? 'flex-row-reverse' : ''}`}
              >
                 <Globe className="w-3.5 h-3.5 text-accent-violet opacity-60" />
@@ -147,12 +163,51 @@ export const AdminLayout = () => {
 
         {/* Dynamic Content Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar p-10 relative">
-          <div className="max-w-6xl mx-auto relative z-10 animate-in fade-in duration-700">
+          <div className="max-w-6xl mx-auto relative z-10 animate-in fade-in duration-700 pb-32">
             <Outlet context={{ lang }} />
           </div>
           {/* Subtle Background Glow for main content */}
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-radial from-accent-violet/5 to-transparent pointer-events-none -z-1" />
         </main>
+
+        {/* Global Save/Draft Bar */}
+        {(isDirty || saveStatus !== 'idle') && (
+          <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-100 w-[90%] max-w-2xl bg-[#0F0F0F]/80 backdrop-blur-3xl border border-white/10 rounded-full p-2.5 shadow-[0_30px_100px_rgba(0,0,0,1)] flex items-center justify-between transition-all duration-500 animate-in slide-in-from-bottom-10 ${isRtl ? 'flex-row-reverse' : ''}`}>
+             <div className={`flex items-center gap-4 px-6 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className="w-2.5 h-2.5 rounded-full bg-accent-violet animate-pulse shadow-[0_0_12px_rgba(139,92,246,1)]" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white/80">{t[lang].unsaved}</span>
+             </div>
+
+             <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <button 
+                  onClick={cancelChanges}
+                  disabled={saveStatus === 'saving'}
+                  className="px-6 py-2.5 rounded-full hover:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white transition-all disabled:opacity-30"
+                >
+                  {t[lang].reset}
+                </button>
+                
+                <button 
+                  onClick={saveChanges}
+                  disabled={saveStatus === 'saving'}
+                  className={`px-10 py-3.5 rounded-full bg-accent-violet hover:bg-accent-violet/80 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      {t[lang].saving}
+                    </>
+                  ) : saveStatus === 'saved' ? (
+                    t[lang].saved
+                  ) : saveStatus === 'error' ? (
+                    t[lang].error
+                  ) : (
+                    t[lang].save
+                  )}
+                </button>
+             </div>
+          </div>
+        )}
       </div>
       
       {showMediaManager && <MediaManagerModal lang={lang} onClose={() => setShowMediaManager(false)} />}

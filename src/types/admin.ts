@@ -270,15 +270,29 @@ export interface AdminContextType {
   deleteCrmProject: (id: number) => Promise<void>;
   reorderCrmProjects: (projectId: number, newIndex: number) => Promise<void>;
 
+  // --- 4. Public Site Configuration (Draftable) ---
   appearance: Appearance;
-  setAppearance: React.Dispatch<React.SetStateAction<Appearance>>;
+  setAppearance: (newAppearance: Partial<Appearance>) => void;
   config: AdminConfig;
   setConfig: React.Dispatch<React.SetStateAction<AdminConfig>>;
   siteContent: Content;
   updateText: (section: keyof Content, fieldPath: string, lang: 'en' | 'ar' | 'raw', newValue: string) => void;
   updateSectionArray: (section: keyof Content, fieldPath: string, newArray: unknown[]) => void;
-
   sections: SectionBlueprint[];
+  toggleVisibility: (id: SectionId) => void;
+  toggleNavbarVisibility: (id: SectionId) => void;
+  moveSection: (id: SectionId, direction: 'up' | 'down') => void;
+  reorderSections: (startIndex: number, endIndex: number) => void;
+  setSectionsOrder: (newSections: SectionBlueprint[]) => void;
+  updateSectionLabel: (id: SectionId, labels: { en: string; ar: string }) => void;
+  
+  // --- Draft System Control ---
+  isDirty: boolean;
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  saveChanges: () => Promise<void>;
+  cancelChanges: () => void;
+
+  // --- 5. System & Media State ---
   notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
   loading: boolean;
@@ -288,18 +302,8 @@ export interface AdminContextType {
   deleteMedia: (assetId: string) => Promise<void>;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
-  syncSettings: (overrides?: {
-    appearance?: Appearance;
-    config?: AdminConfig;
-    siteContent?: Content;
-    sections?: SectionBlueprint[];
-  }) => Promise<void>;
-  toggleVisibility: (id: SectionId) => void;
-  toggleNavbarVisibility: (id: SectionId) => void;
-  moveSection: (id: SectionId, direction: 'up' | 'down') => void;
-  reorderSections: (startIndex: number, endIndex: number) => void;
-  setSectionsOrder: (newSections: SectionBlueprint[]) => void;
-  updateSectionLabel: (id: SectionId, labels: { en: string; ar: string }) => void;
+
+  // --- 5. CRM & Admin Operations (Instant Persistence) ---
   reorderProjects: (projectId: number, newIndex: number) => Promise<void>;
   
   stats: SystemStats;

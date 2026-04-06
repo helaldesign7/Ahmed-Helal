@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { content as initialContent, type Content } from '../data/content';
 import { supabase } from '../lib/supabase';
 import type { 
@@ -13,12 +13,25 @@ import { AdminContext } from './useAdmin';
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
-  // --- 1. Master States ---
+  // --- 1. Internal System States ---
   const [projects, setProjects] = useState<Project[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [crmClients, setCrmClients] = useState<CRMClient[]>([]);
   const [crmProjects, setCrmProjects] = useState<CRMProject[]>([]);
-  const [appearance, setAppearance] = useState<Appearance>({
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<SystemStats>({
+    visits: 2450,
+    activeUsers: 142,
+    uptime: '99.9%',
+    load: 12
+  });
+
+  // --- 2. Public Site Draft System ---
+  const [appearance, setAppearanceDraft] = useState<Appearance>({
     accentColor: '#8b5cf6',
     bgColor: '#000000',
     coreGlow: 'rgba(139, 92, 246, 0.5)',
@@ -26,6 +39,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     borderRadius: '1rem',
     glassmorphism: true
   });
+  const [siteContent, setSiteContentDraft] = useState<Content>(initialContent);
+  const [sections, setSectionsDraft] = useState<SectionBlueprint[]>(defaultBlueprint);
   const [config, setConfig] = useState<AdminConfig>({
     ai: {
       assistantName: 'A.U.R.A',
@@ -39,78 +54,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       lastUpdatedAt: new Date().toISOString()
     }
   });
-  const [siteContent, setSiteContent] = useState<Content>(initialContent);
-  const [sections, setSections] = useState<SectionBlueprint[]>(defaultBlueprint);
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // --- 2. Data Fetching ---
-  const fetchActivityLogs = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      if (data) setActivityLogs(data as ActivityLog[]);
-    } catch (err) {
-      console.warn('[AdminContext] Activity logs fetch error:', err);
-    }
-  }, []);
+  const [persistedAppearance, setPersistedAppearance] = useState<Appearance | null>(null);
+  const [persistedContent, setPersistedContent] = useState<Content | null>(null);
+  const [persistedSections, setPersistedSections] = useState<SectionBlueprint[] | null>(null);
 
-  const fetchProjectsData = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('displayorder', { ascending: true });
-      if (error) throw error;
-      if (data) setProjects(data as Project[]);
-    } catch (err) {
-      console.warn('[AdminContext] Projects fetch error:', err);
-    }
-  }, []);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const fetchLeadsData = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('date', { ascending: false });
-      if (error) throw error;
-      if (data) setLeads(data as Lead[]);
-    } catch (err) {
-      console.warn('[AdminContext] Leads fetch error:', err);
-    }
-  }, []);
-
-  const fetchCrmData = useCallback(async () => {
-    try {
-      const [{ data: clients }, { data: crmProjs }] = await Promise.all([
-        supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
-        supabase.from('crm_projects').select('*').order('created_at', { ascending: false })
-      ]);
-      if (clients) setCrmClients(clients as CRMClient[]);
-      if (crmProjs) setCrmProjects(crmProjs as CRMProject[]);
-    } catch (err) {
-      console.warn('[AdminContext] CRM fetch error:', err);
-    }
-  }, []);
-
-  const fetchMediaAssetsData = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('media_assets')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      if (data) setMediaAssets(data as MediaAsset[]);
-    } catch (err) {
-      console.warn('[AdminContext] Media Assets fetch error:', err);
-    }
-  }, []);
+  // --- 3. Data Fetching Logic ---
 
   const fetchSiteSettingsData = useCallback(async () => {
     try {
@@ -124,79 +76,77 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (data?.content) {
         const s = data.content;
-        if (s.appearance) setAppearance(prev => ({ ...prev, ...s.appearance }));
-        if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
-        if (s.siteContent) {
-          setSiteContent(prev => {
-            const merged = { ...prev };
-            Object.entries(s.siteContent).forEach(([key, value]) => {
-              const sectionKey = key as keyof Content;
-              if (!value) return;
+        if (s.appearance) setPersistedAppearance(s.appearance);
+        if (s.siteContent) setPersistedContent(s.siteContent as Content);
+        if (s.sections) setPersistedSections(s.sections as SectionBlueprint[]);
 
-              if (Array.isArray(value)) {
-                (merged as Record<string, unknown>)[sectionKey] = value;
-              } else if (typeof value === 'object' && prev[sectionKey]) {
-                (merged as Record<string, unknown>)[sectionKey] = { 
-                  ...(prev[sectionKey] as object), 
-                  ...(value as object) 
-                };
-              } else {
-                (merged as Record<string, unknown>)[sectionKey] = value;
-              }
+        if (!isDirty) {
+          if (s.appearance) setAppearanceDraft(prev => ({ ...prev, ...s.appearance }));
+          if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
+          if (s.siteContent) {
+            setSiteContentDraft(prev => {
+              const merged = { ...prev };
+              Object.entries(s.siteContent as Content).forEach(([key, value]) => {
+                const sectionKey = key as keyof Content;
+                if (!value) return;
+                if (Array.isArray(value)) {
+                  (merged as Record<string, unknown>)[sectionKey] = value;
+                } else if (typeof value === 'object' && prev[sectionKey]) {
+                  (merged as Record<string, unknown>)[sectionKey] = { 
+                    ...(prev[sectionKey] as object), 
+                    ...(value as object) 
+                  };
+                } else {
+                  (merged as Record<string, unknown>)[sectionKey] = value;
+                }
+              });
+              return merged;
             });
-            return merged;
-          });
+          }
+          if (s.sections) setSectionsDraft(s.sections as SectionBlueprint[]);
         }
-        if (s.sections) setSections(s.sections);
       }
     } catch (err) {
-      console.error('[AdminContext] Critical Settings failed:', err);
+      console.error('[AdminContext] Settings Fetch Failed:', err);
     }
-  }, []);
+  }, [isDirty]);
 
   const fetchGlobalData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('[AdminContext] Starting secure data fetch sequence...');
-      await Promise.all([
-        fetchActivityLogs(),
-        fetchProjectsData(),
-        fetchLeadsData(),
-        fetchCrmData(),
-        fetchMediaAssetsData(),
+      const [p, l, cClients, cProjs, m, logs] = await Promise.all([
+        supabase.from('projects').select('*').order('displayorder', { ascending: true }),
+        supabase.from('leads').select('*').order('date', { ascending: false }),
+        supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
+        supabase.from('crm_projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('media_assets').select('*').order('created_at', { ascending: false }),
+        supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(50),
         fetchSiteSettingsData()
       ]);
+
+      if (p.data) setProjects(p.data as Project[]);
+      if (l.data) setLeads(l.data as Lead[]);
+      if (cClients.data) setCrmClients(cClients.data as CRMClient[]);
+      if (cProjs.data) setCrmProjects(cProjs.data as CRMProject[]);
+      if (m.data) setMediaAssets(m.data as MediaAsset[]);
+      if (logs.data) setActivityLogs(logs.data as ActivityLog[]);
     } finally {
       setLoading(false);
     }
-  }, [fetchActivityLogs, fetchProjectsData, fetchLeadsData, fetchCrmData, fetchMediaAssetsData, fetchSiteSettingsData]);
+  }, [fetchSiteSettingsData]);
 
   useEffect(() => {
     fetchGlobalData();
-    
-    // --- Targeted Real-time Subscriptions (Public Only) ---
-    const siteSettingsSub = supabase
-      .channel('public-site-sync')
+    const channel = supabase.channel('site-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: 'id=eq.global' }, () => {
-        console.log('[Sync] Site settings changed, updating public state...');
         fetchSiteSettingsData();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        console.log('[Sync] Projects changed, updating public list...');
-        fetchProjectsData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_assets' }, () => {
-        console.log('[Sync] Media assets changed, updating library...');
-        fetchMediaAssetsData();
-      })
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchGlobalData, fetchSiteSettingsData]);
 
-    return () => {
-      supabase.removeChannel(siteSettingsSub);
-    };
-  }, [fetchGlobalData, fetchSiteSettingsData, fetchProjectsData, fetchMediaAssetsData]);
+  // --- 4. System Action Helpers ---
 
-  // --- 3. Notification & Activity Helpers ---
   const pushNotification = useCallback((message: string, type: 'lead' | 'system' | 'update' = 'system', title?: string) => {
     const id = Date.now().toString();
     setNotifications(prev => [{
@@ -212,670 +162,278 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const logActivity = useCallback(async (action: string, targetType: string, targetId?: string, details?: Record<string, unknown>) => {
     try {
-      const { error } = await supabase.from('activity_logs').insert({
+      await supabase.from('activity_logs').insert({
         action,
         target_type: targetType,
         target_id: targetId?.toString(),
         details: details || {}
       });
-      if (error) throw error;
-    } catch (err) {
-      console.error("Log Activity Failed:", err);
-    }
+    } catch (err) { console.error("Log Activity Failed:", err); }
   }, []);
 
-  // --- 4. Persistence & Sync ---
-  const syncSettings = useCallback(async (overrides?: {
-    appearance?: Appearance;
-    config?: AdminConfig;
-    siteContent?: Content;
-    sections?: SectionBlueprint[];
-  }) => {
-    const previous = { appearance, config, siteContent, sections };
-    const payload = {
-      appearance: overrides?.appearance || appearance,
-      config: overrides?.config || config,
-      siteContent: overrides?.siteContent || siteContent,
-      sections: overrides?.sections || sections
-    };
+  // --- 5. Working State Setters (Draft System) ---
 
-    try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({
-          id: 'global',
-          content: payload,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
+  const setAppearance = useCallback((updates: Partial<Appearance>) => {
+    setAppearanceDraft(prev => {
+      const updated = { ...prev, ...updates };
+      setIsDirty(true);
+      return updated;
+    });
+  }, []);
 
-      if (error) throw error;
-      console.log("[AdminContext] Global Sync Success");
-    } catch (err) {
-      // Rollback logic
-      if (overrides?.appearance) setAppearance(previous.appearance);
-      if (overrides?.config) setConfig(previous.config);
-      if (overrides?.siteContent) setSiteContent(previous.siteContent);
-      if (overrides?.sections) setSections(previous.sections);
-      
-      pushNotification("Failed to sync settings with cloud. Changes reverted.", "system");
-      console.error("[AdminContext] Global Sync Failed:", err);
-    }
-  }, [appearance, config, siteContent, sections, pushNotification]);
+  const updateText = useCallback((section: keyof Content, fieldPath: string, lang: 'en' | 'ar' | 'raw', newValue: string) => {
+    setSiteContentDraft(prev => {
+      const newContent = { ...prev };
+      const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
+      const keys = fieldPath.split('.');
+      let current: Record<string, unknown> = sectionData;
+      for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]] as Record<string, unknown>; }
+      if (lang === 'raw') current[keys[keys.length - 1]] = newValue;
+      else (current[keys[keys.length - 1]] as Record<string, string>)[lang] = newValue;
+      (newContent[section] as unknown) = sectionData;
+      setIsDirty(true);
+      return newContent;
+    });
+  }, []);
 
-  const toggleVisibility = async (id: SectionId) => {
-    setSections(prev => {
+  const updateSectionArray = useCallback((section: keyof Content, fieldPath: string, newArray: unknown[]) => {
+    setSiteContentDraft(prev => {
+      const newContent = { ...prev };
+      const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
+      const keys = fieldPath.split('.');
+      let current: Record<string, unknown> = sectionData;
+      for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]] as Record<string, unknown>; }
+      current[keys[keys.length - 1]] = newArray;
+      (newContent[section] as unknown) = sectionData;
+      setIsDirty(true);
+      return newContent;
+    });
+  }, []);
+
+  const toggleVisibility = useCallback((id: SectionId) => {
+    setSectionsDraft(prev => {
       const updated = prev.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
-      syncSettings({ sections: updated });
-      logActivity('update', 'section_visibility', id);
+      setIsDirty(true);
       return updated;
     });
-  };
+  }, []);
 
-  const toggleNavbarVisibility = async (id: SectionId) => {
-    setSections(prev => {
+  const toggleNavbarVisibility = useCallback((id: SectionId) => {
+    setSectionsDraft(prev => {
       const updated = prev.map(s => s.id === id ? { ...s, inNavbar: !s.inNavbar } : s);
-      syncSettings({ sections: updated });
-      logActivity('update', 'section_navbar', id);
+      setIsDirty(true);
       return updated;
     });
-  };
+  }, []);
 
-  const moveSection = async (id: SectionId, direction: 'up' | 'down') => {
-    setSections(prev => {
+  const moveSection = useCallback((id: SectionId, direction: 'up' | 'down') => {
+    setSectionsDraft(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1) return prev;
       const newIndex = direction === 'up' ? index - 1 : index + 1;
       if (newIndex < 0 || newIndex >= prev.length) return prev;
-
       const updated = [...prev];
       [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
-      
       const final = updated.map((s, i) => ({ ...s, order: i }));
-      syncSettings({ sections: final });
-      logActivity('reorder', 'section_move', id);
+      setIsDirty(true);
       return final;
     });
-  };
+  }, []);
 
-  const reorderSections = (startIndex: number, endIndex: number) => {
-    setSections(prev => {
+  const reorderSections = useCallback((startIndex: number, endIndex: number) => {
+    setSectionsDraft(prev => {
       const result = Array.from(prev);
       const [removed] = result.splice(startIndex, 1);
       result.splice(endIndex, 0, removed);
       const ordered = result.map((s, i) => ({ ...s, order: i }));
-      syncSettings({ sections: ordered });
-      logActivity('reorder', 'sections_dnd');
+      setIsDirty(true);
       return ordered;
     });
-  };
-
-  const setSectionsOrder = async (newSections: SectionBlueprint[]) => {
-    const final = newSections.map((s, i) => ({ ...s, order: i }));
-    setSections(final);
-    await syncSettings({ sections: final });
-  };
-
-  const updateSectionLabel = (id: SectionId, labels: { en: string; ar: string }) => {
-    setSections(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, navLabel: labels } : s);
-      syncSettings({ sections: updated });
-      logActivity('update', 'section_label', id, labels);
-      return updated;
-    });
-  };
-
-  // --- 5. CRUD Operations ---
-  
-  // Projects
-  const addProject = async (project: Omit<Project, 'id'>) => {
-    try {
-      const { data, error } = await supabase.from('projects').insert([project]).select();
-      if (error) throw error;
-      if (data) {
-        setProjects(prev => [data[0] as Project, ...prev]);
-        logActivity('create', 'project', data[0].id.toString(), { title: data[0].title });
-      }
-    } catch (err) {
-      pushNotification("Failed to add project to cloud.", "system");
-      console.error("Error adding project:", err);
-    }
-  };
-
-  const updateProject = async (id: number, updates: Partial<Project>) => {
-    const previous = [...projects];
-    try {
-      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-      const { error } = await supabase.from('projects').update(updates).eq('id', id);
-      if (error) throw error;
-      logActivity('update', 'project', id.toString(), updates);
-    } catch (err) {
-      setProjects(previous);
-      console.error("Error updating project:", err);
-    }
-  };
-
-  const deleteProject = async (id: number) => {
-    const previous = [...projects];
-    try {
-      setProjects(prev => prev.filter(p => p.id !== id));
-      const { error } = await supabase.from('projects').delete().eq('id', id);
-      if (error) throw error;
-      logActivity('delete', 'project', id.toString());
-    } catch (err) {
-      setProjects(previous);
-      console.error("Error deleting project:", err);
-    }
-  };
-
-  const addLead = async (lead: Omit<Lead, 'id'>) => {
-    try {
-      const { data, error } = await supabase.from('leads').insert([lead]).select();
-      if (error) throw error;
-      if (data) {
-        setLeads(prev => [data[0] as Lead, ...prev]);
-        logActivity('create', 'lead', data[0].id.toString(), { name: data[0].name });
-      }
-    } catch (err) {
-      pushNotification("Failed to add lead.", "system");
-      console.error("Error adding lead:", err);
-    }
-  };
-
-  const updateLead = async (id: number, updates: Partial<Lead>) => {
-    const previous = [...leads];
-    try {
-      // Optimistic locally
-      setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
-      const { error } = await supabase.from('leads').update(updates).eq('id', id);
-      if (error) throw error;
-      logActivity('update', 'lead', id.toString(), updates);
-    } catch (err) {
-      setLeads(previous);
-      console.error("Error updating lead:", err);
-    }
-  };
-
-  const deleteLead = async (id: number) => {
-    const previous = [...leads];
-    try {
-      setLeads(prev => prev.filter(l => l.id !== id));
-      const { error } = await supabase.from('leads').delete().eq('id', id);
-      if (error) throw error;
-      logActivity('delete', 'lead', id.toString());
-    } catch (err) {
-      setLeads(previous);
-      pushNotification("Failed to delete lead. Reverted.", "system");
-      console.error("Error deleting lead:", err);
-    }
-  };
-
-  // CRM Clients
-  const addCrmClient = async (client: Omit<CRMClient, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      const { data, error } = await supabase.from('crm_clients').insert([{ ...client, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]).select().single();
-      if (error) throw error;
-      if (data) {
-        setCrmClients(prev => [data as CRMClient, ...prev]);
-        logActivity('create', 'client', data.id.toString(), { name: data.name });
-      }
-    } catch (err) {
-      pushNotification("Failed to add CRM client.", "system");
-      console.error("Error adding CRM client:", err);
-    }
-  };
-
-  const updateCrmClient = async (id: number, updates: Partial<CRMClient>) => {
-    const previous = [...crmClients];
-    try {
-      setCrmClients(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
-      const { error } = await supabase.from('crm_clients').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-      if (error) throw error;
-      logActivity('update', 'client', id.toString(), updates);
-    } catch (err) {
-      setCrmClients(previous);
-      pushNotification("Failed to update CRM client.", "system");
-      console.error("Error updating CRM client:", err);
-    }
-  };
-
-  const deleteCrmClient = async (id: number) => {
-    const previous = [...crmClients];
-    try {
-      setCrmClients(prev => prev.filter(c => c.id !== id));
-      const { error } = await supabase.from('crm_clients').delete().eq('id', id);
-      if (error) throw error;
-      logActivity('delete', 'client', id.toString());
-    } catch (err) {
-      setCrmClients(previous);
-      pushNotification("Failed to delete CRM client.", "system");
-      console.error("Error deleting CRM client:", err);
-    }
-  };
-
-  // CRM Projects
-  const addCrmProject = async (project: Omit<CRMProject, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      const { data, error } = await supabase.from('crm_projects').insert([{ ...project, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]).select().single();
-      if (error) throw error;
-      if (data) {
-        setCrmProjects(prev => [data as CRMProject, ...prev]);
-        logActivity('create', 'crm_project', data.id.toString(), { name: data.project_name });
-      }
-    } catch (err) {
-      pushNotification("Failed to add CRM project.", "system");
-      console.error("Error adding CRM project:", err);
-    }
-  };
-
-  const updateCrmProject = async (id: number, updates: Partial<CRMProject>) => {
-    const previous = [...crmProjects];
-    try {
-      setCrmProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
-      const { error } = await supabase.from('crm_projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-      if (error) throw error;
-      logActivity('update', 'crm_project', id.toString(), updates);
-    } catch (err) {
-      setCrmProjects(previous);
-      pushNotification("Failed to update CRM project.", "system");
-      console.error("Error updating CRM project:", err);
-    }
-  };
-
-  const deleteCrmProject = async (id: number) => {
-    const previous = [...crmProjects];
-    try {
-      setCrmProjects(prev => prev.filter(p => p.id !== id));
-      const { error } = await supabase.from('crm_projects').delete().eq('id', id);
-      if (error) throw error;
-      logActivity('delete', 'crm_project', id.toString());
-    } catch (err) {
-      setCrmProjects(previous);
-      pushNotification("Failed to delete CRM project.", "system");
-      console.error("Error deleting CRM project:", err);
-    }
-  };
-
-  const reorderCrmProjects = async (projectId: number, newIndex: number) => {
-    setCrmProjects(prev => {
-      const sorted = [...prev].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-      const oldIndex = sorted.findIndex(p => p.id === projectId);
-      if (oldIndex === -1) return prev;
-      
-      const [removed] = sorted.splice(oldIndex, 1);
-      sorted.splice(newIndex, 0, removed);
-      
-      const updated = sorted.map((p, i) => ({ ...p, display_order: i }));
-      
-      Promise.all(updated.map(p => supabase.from('crm_projects').update({ display_order: p.display_order, updated_at: new Date().toISOString() }).eq('id', p.id)))
-        .then(() => logActivity('reorder', 'crm_projects'))
-        .catch(err => console.error("Error syncing CRM project reorder:", err));
-        
-      return updated;
-    });
-  };
-
-  // --- Project Workspace Sub-resources (Phase 10) ---
-  const fetchProjectData = useCallback(async (projectId: number) => {
-    const [
-      { data: tasks },
-      { data: notes },
-      { data: links },
-      { data: activities }
-    ] = await Promise.all([
-      supabase.from('project_tasks').select('*').eq('project_id', projectId).order('created_at', { ascending: true }),
-      supabase.from('project_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-      supabase.from('project_links').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-      supabase.from('project_activities').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
-    ]);
-
-    return {
-      tasks: (tasks || []) as ProjectTask[],
-      notes: (notes || []) as ProjectNote[],
-      links: (links || []) as ProjectLink[],
-      activities: (activities || []) as ProjectActivity[]
-    };
   }, []);
 
-  const addTask = async (task: Omit<ProjectTask, 'id' | 'created_at'>) => {
-    try {
-      const { error } = await supabase.from('project_tasks').insert([task]).select().single();
-      if (error) throw error;
-      await logProjectActivity(task.project_id, 'create_task', { title: task.title });
-    } catch (err) {
-      console.error("Error adding task:", err);
-    }
-  };
+  const setSectionsOrder = useCallback((newSections: SectionBlueprint[]) => {
+    setSectionsDraft(newSections.map((s, i) => ({ ...s, order: i })));
+    setIsDirty(true);
+  }, []);
 
-  const updateTask = async (id: string, updates: Partial<ProjectTask>) => {
-    try {
-      const { data: task } = await supabase.from('project_tasks').select('project_id, title').eq('id', id).single();
-      const { error } = await supabase.from('project_tasks').update(updates).eq('id', id);
-      if (error) throw error;
-      if (task) await logProjectActivity(task.project_id, 'update_task', { title: task.title, ...updates });
-    } catch (err) {
-      console.error("Error updating task:", err);
-    }
-  };
-
-  const deleteTask = async (id: string) => {
-    try {
-      const { data: task } = await supabase.from('project_tasks').select('project_id, title').eq('id', id).single();
-      const { error } = await supabase.from('project_tasks').delete().eq('id', id);
-      if (error) throw error;
-      if (task) await logProjectActivity(task.project_id, 'delete_task', { title: task.title });
-    } catch (err) {
-      console.error("Error deleting task:", err);
-    }
-  };
-
-  const addNote = async (note: Omit<ProjectNote, 'id' | 'created_at'>) => {
-    try {
-      const { error } = await supabase.from('project_notes').insert([note]);
-      if (error) throw error;
-      await logProjectActivity(note.project_id, 'add_note');
-    } catch (err) {
-      console.error("Error adding note:", err);
-    }
-  };
-
-  const deleteNote = async (id: string) => {
-    try {
-      const { data: note } = await supabase.from('project_notes').select('project_id').eq('id', id).single();
-      const { error } = await supabase.from('project_notes').delete().eq('id', id);
-      if (error) throw error;
-      if (note) await logProjectActivity(note.project_id, 'delete_note');
-    } catch (err) {
-      console.error("Error deleting note:", err);
-    }
-  };
-
-  const addLink = async (link: Omit<ProjectLink, 'id' | 'created_at'>) => {
-    try {
-      const { error } = await supabase.from('project_links').insert([link]);
-      if (error) throw error;
-      await logProjectActivity(link.project_id, 'add_link', { label: link.label });
-    } catch (err) {
-      console.error("Error adding link:", err);
-    }
-  };
-
-  const deleteLink = async (id: string) => {
-    try {
-      const { data: link } = await supabase.from('project_links').select('project_id, label').eq('id', id).single();
-      const { error } = await supabase.from('project_links').delete().eq('id', id);
-      if (error) throw error;
-      if (link) await logProjectActivity(link.project_id, 'delete_link', { label: link.label });
-    } catch (err) {
-      console.error("Error deleting link:", err);
-    }
-  };
-
-  const logProjectActivity = async (projectId: number, action: string, details?: Record<string, unknown>) => {
-    try {
-      await supabase.from('project_activities').insert({
-        project_id: projectId,
-        action,
-        details: details || {}
-      });
-    } catch (err) {
-      console.error("Log Project Activity Failed:", err);
-    }
-  };
-
-  // --- 6. Chat Persistence Helpers ---
-  const fetchConversations = async () => {
-    const { data, error } = await supabase.from('chat_conversations').select('*').order('last_message_at', { ascending: false });
-    if (!error && data) setConversations(data as ChatConversation[]);
-  };
-
-  const fetchMessages = async (conversationId: string) => {
-    const { data, error } = await supabase.from('chat_messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true });
-    if (error) throw error;
-    return data as ChatMessage[];
-  };
-
-  // --- 7. Content Managers ---
-  const updateText = (section: keyof Content, fieldPath: string, lang: 'en' | 'ar' | 'raw', newValue: string) => {
-    setSiteContent(prev => {
-      const newContent = { ...prev };
-      const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
-      
-      const keys = fieldPath.split('.');
-      let current: Record<string, unknown> = sectionData;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]] as Record<string, unknown>;
-      }
-      
-      if (lang === 'raw') {
-        current[keys[keys.length - 1]] = newValue;
-      } else {
-        (current[keys[keys.length - 1]] as Record<string, string>)[lang] = newValue;
-      }
-      
-      (newContent[section] as unknown) = sectionData;
-      syncSettings({ siteContent: newContent });
-      logActivity('update', 'site_content', section, { field: fieldPath, newValue });
-      return newContent;
-    });
-  };
-
-  const updateSectionArray = (section: keyof Content, fieldPath: string, newArray: unknown[]) => {
-    setSiteContent(prev => {
-      const newContent = { ...prev };
-      const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
-      
-      const keys = fieldPath.split('.');
-      let current: Record<string, unknown> = sectionData;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]] as Record<string, unknown>;
-      }
-      
-      current[keys[keys.length - 1]] = newArray;
-      (newContent[section] as unknown) = sectionData;
-      syncSettings({ siteContent: newContent });
-      logActivity('update', 'site_content_array', section, { field: fieldPath });
-      return newContent;
-    });
-  };
-
-  // --- 6. Supporting States ---
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
-  const [stats, setStats] = useState<SystemStats>({
-    visits: 2450,
-    activeUsers: 142,
-    uptime: '99.9%',
-    load: 12
-  });
-
-  const markNotificationAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const clearNotifications = () => setNotifications([]);
-
-
-  const updateAiConfig = async (updates: Partial<AdminConfig['ai']>) => {
-    const previous = { ...config };
-    const newAi = { 
-      ...config.ai, 
-      ...updates, 
-      lastUpdatedAt: new Date().toISOString() 
-    };
-    const newConfig = { ...config, ai: newAi };
-    
-    try {
-      // Update local state
-      setConfig(newConfig);
-      
-      // Persist to Supabase
-      await syncSettings({ config: newConfig });
-      
-      // Log activity
-      logActivity('update', 'ai_config', 'global', updates);
-    } catch (err) {
-      setConfig(previous);
-      pushNotification("Failed to update AI configuration.", "system");
-      console.error("Error updating AI Config:", err);
-    }
-  };
-
-  const reorderProjects = async (projectId: number, newIndex: number) => {
-    const previous = [...projects];
-    setProjects(prev => {
-      // Create new sorted array
-      const sorted = [...prev].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-      const oldIndex = sorted.findIndex(p => p.id === projectId);
-      if (oldIndex === -1) return prev;
-      
-      const [removed] = sorted.splice(oldIndex, 1);
-      sorted.splice(newIndex, 0, removed);
-      
-      // Update displayOrder for all and return
-      const updated = sorted.map((p, i) => ({ ...p, displayOrder: i }));
-      
-      // Background Sync to Supabase
-      Promise.all(updated.map(p => supabase.from('projects').update({ displayOrder: p.displayOrder }).eq('id', p.id)))
-        .then(() => logActivity('reorder', 'projects'))
-        .catch(err => {
-          setProjects(previous);
-          pushNotification("Failed to save project order.", "system");
-          console.error("Error syncing project reorder:", err);
-        });
-        
+  const updateSectionLabel = useCallback((id: SectionId, labels: { en: string; ar: string }) => {
+    setSectionsDraft(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, navLabel: labels } : s);
+      setIsDirty(true);
       return updated;
     });
-  };
+  }, []);
 
-  // --- 8. Media Library Actions (Phase 9D) ---
-  const uploadMedia = async (file: File, metadata?: { category?: string; alt_text?: string; title?: string }): Promise<MediaAsset> => {
-    const MAX_SIZE = 15 * 1024 * 1024; // 15MB
-    const ALLOWED_TYPES = [
-      'image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 
-      'video/mp4', 'application/pdf', 'application/msword', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
+  // --- 6. Save/Cancel Draft Flow ---
 
-    if (file.size > MAX_SIZE) throw new Error("File too large. Max 15MB allowed.");
-    if (!ALLOWED_TYPES.includes(file.type)) throw new Error(`File type ${file.type} not allowed.`);
-
+  const saveChanges = useCallback(async () => {
+    setSaveStatus('saving');
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      const payload = { appearance, config, siteContent, sections };
+      const { error } = await supabase.from('site_settings').upsert({
+        id: 'global', content: payload, updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+      if (error) throw error;
 
-      const { error: uploadError } = await supabase.storage
-        .from('portfolio_media')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio_media')
-        .getPublicUrl(filePath);
-
-      const newAsset: Omit<MediaAsset, 'id' | 'created_at'> = {
-        filename: file.name,
-        storage_path: filePath,
-        full_url: publicUrl,
-        type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document',
-        mime_type: file.type,
-        size_bytes: file.size,
-        source: 'upload',
-        category: metadata?.category || 'General',
-        alt_text: metadata?.alt_text || '',
-        title: metadata?.title || file.name,
-        tags: []
-      };
-
-      const { data: dbAsset, error: dbError } = await supabase
-        .from('media_assets')
-        .insert(newAsset)
-        .select()
-        .single();
-
-      if (dbError) throw dbError;
-
-      const result = dbAsset as MediaAsset;
-      setMediaAssets(prev => [result, ...prev]);
-      logActivity('upload', 'media_asset', result.id, { filename: file.name });
-      return result;
+      setPersistedAppearance(appearance);
+      setPersistedContent(siteContent);
+      setPersistedSections(sections);
+      setIsDirty(false);
+      setSaveStatus('saved');
+      pushNotification("Changes published & live!", "system", "Site Published");
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      logActivity('publish', 'site_settings', 'global');
     } catch (err) {
-      console.error("Upload Error:", err);
-      throw err;
+      setSaveStatus('error');
+      pushNotification("Failed to publish changes.", "system", "Error");
+      setTimeout(() => setSaveStatus('idle'), 5000);
     }
-  };
+  }, [appearance, config, siteContent, sections, pushNotification, logActivity]);
 
-  const deleteMedia = async (assetId: string) => {
-    const previous = [...mediaAssets];
-    try {
-      const asset = mediaAssets.find(a => a.id === assetId);
-      if (!asset) return;
+  const cancelChanges = useCallback(() => {
+    if (persistedAppearance) setAppearanceDraft(persistedAppearance);
+    if (persistedContent) setSiteContentDraft(persistedContent);
+    if (persistedSections) setSectionsDraft(persistedSections);
+    setIsDirty(false);
+    setSaveStatus('idle');
+    pushNotification("Unsaved changes discarded.", "system");
+  }, [persistedAppearance, persistedContent, persistedSections, pushNotification]);
 
-      // Optimistic delete from UI
-      setMediaAssets(prev => prev.filter(a => a.id !== assetId));
+  // --- 7. Instant CRUD (CRM, Media, Logs etc.) ---
 
-      if (asset.source === 'upload') {
-        const { error: storageError } = await supabase.storage
-          .from('portfolio_media')
-          .remove([asset.storage_path]);
-        if (storageError) console.warn("Storage deletion warning:", storageError);
-      }
+  const addProject = useCallback(async (project: Omit<Project, 'id'>) => {
+    const { data } = await supabase.from('projects').insert([project]).select();
+    if (data) setProjects(prev => [data[0] as Project, ...prev]);
+  }, []);
+  const updateProject = useCallback(async (id: number, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    await supabase.from('projects').update(updates).eq('id', id);
+  }, []);
+  const deleteProject = useCallback(async (id: number) => {
+    setProjects(prev => prev.filter(p => p.id !== id));
+    await supabase.from('projects').delete().eq('id', id);
+  }, []);
+  const reorderProjects = useCallback(async (id: number, newIndex: number) => {
+    setProjects(prev => {
+      const result = [...prev];
+      const oldIndex = result.findIndex(p => p.id === id);
+      if (oldIndex === -1) return prev;
+      const [removed] = result.splice(oldIndex, 1);
+      result.splice(newIndex, 0, removed);
+      const updated = result.map((p, i) => ({ ...p, displayorder: i }));
+      Promise.all(updated.map(p => supabase.from('projects').update({ displayorder: p.displayorder }).eq('id', p.id)));
+      return updated;
+    });
+  }, []);
 
-      const { error: dbError } = await supabase
-        .from('media_assets')
-        .delete()
-        .eq('id', assetId);
+  const addLead = useCallback(async (lead: Omit<Lead, 'id'>) => {
+    const { data } = await supabase.from('leads').insert([lead]).select();
+    if (data) setLeads(prev => [data[0] as Lead, ...prev]);
+  }, []);
+  const updateLead = useCallback(async (id: number, updates: Partial<Lead>) => {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    await supabase.from('leads').update(updates).eq('id', id);
+  }, []);
+  const deleteLead = useCallback(async (id: number) => {
+    setLeads(prev => prev.filter(l => l.id !== id));
+    await supabase.from('leads').delete().eq('id', id);
+  }, []);
 
-      if (dbError) throw dbError;
+  const addCrmClient = useCallback(async (client: Omit<CRMClient, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data } = await supabase.from('crm_clients').insert([client]).select().single();
+    if (data) setCrmClients(prev => [data as CRMClient, ...prev]);
+  }, []);
+  const updateCrmClient = useCallback(async (id: number, updates: Partial<CRMClient>) => {
+    setCrmClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    await supabase.from('crm_clients').update(updates).eq('id', id);
+  }, []);
+  const deleteCrmClient = useCallback(async (id: number) => {
+    setCrmClients(prev => prev.filter(c => c.id !== id));
+    await supabase.from('crm_clients').delete().eq('id', id);
+  }, []);
+  const addCrmProject = useCallback(async (proj: Omit<CRMProject, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data } = await supabase.from('crm_projects').insert([proj]).select().single();
+    if (data) setCrmProjects(prev => [data as CRMProject, ...prev]);
+  }, []);
+  const updateCrmProject = useCallback(async (id: number, updates: Partial<CRMProject>) => {
+    setCrmProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    await supabase.from('crm_projects').update(updates).eq('id', id);
+  }, []);
+  const deleteCrmProject = useCallback(async (id: number) => {
+    setCrmProjects(prev => prev.filter(p => p.id !== id));
+    await supabase.from('crm_projects').delete().eq('id', id);
+  }, []);
 
-      logActivity('delete', 'media_asset', assetId, { filename: asset.filename });
-    } catch (err) {
-      setMediaAssets(previous);
-      pushNotification("Failed to delete media asset.", "system");
-      console.error("Delete Media Error:", err);
-      throw err;
-    }
-  };
+  const uploadMedia = useCallback(async (file: File, meta: { category?: string; alt_text?: string; title?: string }) => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage.from('portfolio_assets').upload(fileName, file);
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('portfolio_assets').getPublicUrl(uploadData.path);
+    const { data: asset, error: dbError } = await supabase.from('media_assets').insert([{
+      name: file.name, url: publicUrl, type: file.type.split('/')[0], category: meta?.category || 'general'
+    }]).select().single();
+    if (dbError) throw dbError;
+    setMediaAssets(prev => [asset as MediaAsset, ...prev]);
+    return asset as MediaAsset;
+  }, []);
+  const deleteMedia = useCallback(async (id: string) => {
+    setMediaAssets(prev => prev.filter(a => a.id === id));
+    await supabase.from('media_assets').delete().eq('id', id);
+  }, []);
 
-  const updateStats = (newStats: Partial<SystemStats>) => {
-    setStats(prev => ({ ...prev, ...newStats }));
-  };
+  const markNotificationAsRead = useCallback((id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n)), []);
+  const clearNotifications = useCallback(() => setNotifications([]), []);
 
-  return (
-    <AdminContext.Provider value={{
-      projects, setProjects,
-      leads, setLeads,
-      addProject, updateProject, deleteProject,
-      addLead, updateLead, deleteLead,
-      crmClients, setCrmClients,
-      addCrmClient, updateCrmClient, deleteCrmClient,
-      crmProjects, setCrmProjects,
-      addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
-      appearance, setAppearance,
-      config, setConfig,
-      siteContent, updateText, updateSectionArray,
-      sections, notifications, setNotifications,
-      mediaAssets, setMediaAssets, 
-      loading, uploadMedia, deleteMedia,
-      markNotificationAsRead, clearNotifications,
-      syncSettings, toggleVisibility, toggleNavbarVisibility, moveSection, reorderSections, setSectionsOrder, updateSectionLabel, reorderProjects,
-      stats, updateStats,
-      activityLogs, logActivity,
-      conversations, fetchConversations, fetchMessages, updateAiConfig,
-      fetchProjectData, addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity
-    }}>
-      {!loading && children}
-      {loading && (
-        <div className="fixed inset-0 z-9999 bg-primary-black flex items-center justify-center">
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 border-t-2 border-accent-violet rounded-full animate-spin" />
-            <p className="text-white/40 font-mono text-[9px] uppercase tracking-widest animate-pulse">Establishing Secure Cloud Sync...</p>
-          </div>
-        </div>
-      )}
-    </AdminContext.Provider>
-  );
+  const fetchProjectData = useCallback(async (id: number) => {
+    const [t, n, l, a] = await Promise.all([
+      supabase.from('project_tasks').select('*').eq('project_id', id).order('created_at', { ascending: true }),
+      supabase.from('project_notes').select('*').eq('project_id', id).order('created_at', { ascending: false }),
+      supabase.from('project_links').select('*').eq('project_id', id).order('created_at', { ascending: false }),
+      supabase.from('project_activities').select('*').eq('project_id', id).order('created_at', { ascending: false })
+    ]);
+    return { tasks: (t.data || []) as ProjectTask[], notes: (n.data || []) as ProjectNote[], links: (l.data || []) as ProjectLink[], activities: (a.data || []) as ProjectActivity[] };
+  }, []);
+
+  const addTask = useCallback(async (t: Omit<ProjectTask, 'id' | 'created_at'>) => { await supabase.from('project_tasks').insert([t]); }, []);
+  const updateTask = useCallback(async (id: string, u: Partial<ProjectTask>) => { await supabase.from('project_tasks').update(u).eq('id', id); }, []);
+  const deleteTask = useCallback(async (id: string) => { await supabase.from('project_tasks').delete().eq('id', id); }, []);
+  const addNote = useCallback(async (n: Omit<ProjectNote, 'id' | 'created_at'>) => { await supabase.from('project_notes').insert([n]); }, []);
+  const deleteNote = useCallback(async (id: string) => { await supabase.from('project_notes').delete().eq('id', id); }, []);
+  const addLink = useCallback(async (l: Omit<ProjectLink, 'id' | 'created_at'>) => { await supabase.from('project_links').insert([l]); }, []);
+  const deleteLink = useCallback(async (id: string) => { await supabase.from('project_links').delete().eq('id', id); }, []);
+  const logProjectActivity = useCallback(async (pid: number, act: string, det?: Record<string, unknown>) => { await supabase.from('project_activities').insert({ project_id: pid, action: act, details: det || {} }); }, []);
+
+  const updateAiConfig = useCallback(async (u: Partial<AdminConfig['ai']>) => {
+    const updatedAi = { ...config.ai, ...u, lastUpdatedAt: new Date().toISOString() };
+    const newConfig = { ...config, ai: updatedAi };
+    setConfig(newConfig);
+    const payload = { appearance, config: newConfig, siteContent, sections };
+    await supabase.from('site_settings').upsert({ id: 'global', content: payload });
+  }, [appearance, config, siteContent, sections]);
+
+  // --- 8. Context Provisioning ---
+
+  const value = useMemo(() => ({
+    projects, leads, crmClients, crmProjects, appearance, siteContent, sections, config,
+    loading, mediaAssets, notifications, stats, activityLogs, conversations, isDirty, saveStatus,
+    setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
+    moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
+    addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
+    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject,
+    uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
+    addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
+    fetchConversations: async () => {}, fetchMessages: async () => [], updateAiConfig, logActivity, updateStats: () => {}
+  }), [
+    projects, leads, crmClients, crmProjects, appearance, siteContent, sections, config,
+    loading, mediaAssets, notifications, stats, activityLogs, conversations, isDirty, saveStatus,
+    setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
+    moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
+    addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
+    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject,
+    uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
+    addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
+    updateAiConfig, logActivity
+  ]);
+
+  return <AdminContext.Provider value={value as any}>{children}</AdminContext.Provider>;
 };

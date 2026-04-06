@@ -42,12 +42,12 @@ const FloatingTag = ({ word, index }: { word: string; index: number }) => {
       whileHover={{ 
         scale: 1.1, 
         opacity: 1,
-        boxShadow: "0 0 40px rgba(139, 92, 246, 0.5)",
+        boxShadow: "0 0 40px rgba(var(--accent-rgb), 0.5)",
         backgroundColor: "rgba(255, 255, 255, 0.1)"
       }}
       className="absolute z-10 hidden md:flex items-center px-4 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md cursor-default pointer-events-auto shadow-2xl"
     >
-      <div className="w-1 h-1 rounded-full bg-accent-violet mr-2 shadow-[0_0_10px_rgba(139,92,246,1)]" />
+      <div className="w-1 h-1 rounded-full bg-accent-violet mr-2 shadow-[0_0_10px_rgba(var(--accent-rgb),1)]" />
       <span className="text-[9px] font-mono font-black text-white/30 tracking-widest uppercase truncate">{word}</span>
     </motion.div>
   );
@@ -170,7 +170,7 @@ export const Hero = ({ lang }: HeroProps) => {
           className="mb-8"
         >
           <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
-             <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(139,92,246,1)] animate-pulse" />
+             <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(var(--accent-rgb),1)] animate-pulse" />
              <span className="text-[10px] md:text-xs font-mono font-black tracking-[0.4em] uppercase text-white/40">
                {hero?.badge?.[lang] || hero?.badge?.en || 'VISUAL DESIGNER'}
              </span>
@@ -197,7 +197,7 @@ export const Hero = ({ lang }: HeroProps) => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-10 mt-8">
             <Button
               variant="primary"
-              className="w-full sm:w-auto h-20 px-24 text-[12px] shadow-[0_0_50px_rgba(139,92,246,0.3)] hover:shadow-[0_0_80px_rgba(139,92,246,0.5)]"
+              className="w-full sm:w-auto h-20 px-24 text-[12px] shadow-[0_0_50px_rgba(var(--accent-rgb),0.3)] hover:shadow-[0_0_80px_rgba(var(--accent-rgb),0.5)]"
               onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
             >
               {hero?.ctaPrimary?.[lang] || hero?.ctaPrimary?.en || 'Start'}

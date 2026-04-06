@@ -1,22 +1,20 @@
 import { useState } from 'react';
-import { Palette, Baseline, MonitorPlay, Save, Image as ImageIcon } from 'lucide-react';
+import { Palette, Baseline, MonitorPlay, Image as ImageIcon } from 'lucide-react';
 import { useAdmin } from '../../contexts/useAdmin';
 import { useOutletContext } from 'react-router-dom';
+import type { Appearance } from '../../types/admin';
 
 export const AppearanceSettings = () => {
-  const { appearance, setAppearance, syncSettings } = useAdmin();
+  const { appearance, setAppearance } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [activeTab, setActiveTab] = useState<'colors' | 'typography' | 'elements' | 'branding'>('colors');
-  const [isSaving, setIsSaving] = useState(false);
 
   const isRtl = lang === 'ar';
 
   const t = {
     en: {
       title: 'Theme & Appearance',
-      subtitle: 'Global cinematic design system config',
-      deploy: 'Deploy Changes',
-      deploying: 'Deploying...',
+      subtitle: 'Global cinematic design system config (Draft Mode)',
       tabs: {
         colors: 'Colors & Glow',
         typography: 'Typography',
@@ -56,9 +54,7 @@ export const AppearanceSettings = () => {
     },
     ar: {
       title: 'المظهر والسمات',
-      subtitle: 'تكوين نظام التصميم السينمائي الشامل',
-      deploy: 'تطبيق التغييرات',
-      deploying: 'جاري التطبيق...',
+      subtitle: 'تكوين نظام التصميم السينمائي الشامل (وضع المسودة)',
       tabs: {
         colors: 'الألوان والوهج',
         typography: 'الخطوط',
@@ -98,29 +94,22 @@ export const AppearanceSettings = () => {
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    await syncSettings({ appearance });
-    setIsSaving(false);
-  };
-
-  const updateAppearance = (key: string, value: any) => {
-    setAppearance(prev => ({ ...prev, [key]: value }));
+  const updateAppearance = (key: keyof Appearance, value: string | boolean) => {
+    setAppearance({ [key]: value });
     
     // 🚀 LIVE PREVIEW - Inject directly for instant feedback
-    if (key === 'accentColor') {
+    if (key === 'accentColor' && typeof value === 'string') {
       const root = document.documentElement;
       root.style.setProperty('--color-accent-violet', value);
       root.style.setProperty('--accent-violet', value);
       
-      // Calculate RGB for transparency-based elements
       const r = parseInt(value.slice(1, 3), 16);
       const g = parseInt(value.slice(3, 5), 16);
       const b = parseInt(value.slice(5, 7), 16);
       root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
     }
     
-    if (key === 'bgColor') {
+    if (key === 'bgColor' && typeof value === 'string') {
       const root = document.documentElement;
       root.style.setProperty('--color-primary-black', value);
       root.style.setProperty('--bg-black', value);
@@ -135,15 +124,6 @@ export const AppearanceSettings = () => {
           <h1 className="text-3xl font-black uppercase tracking-wider text-white mb-2">{t[lang].title}</h1>
           <p className="text-white/40 text-sm font-mono tracking-widest uppercase">{t[lang].subtitle}</p>
         </div>
-        
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-3 bg-accent-violet hover:bg-accent-violet/80 text-white rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(139,92,246,0.3)] disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          <span className="text-xs font-black uppercase tracking-widest">{isSaving ? t[lang].deploying : t[lang].deploy}</span>
-        </button>
       </div>
 
       <div className={`flex gap-4 border-b border-white/5 pb-4 overflow-x-auto custom-scrollbar ${isRtl ? 'flex-row-reverse' : ''}`}>
