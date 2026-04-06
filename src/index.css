@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@700;800;900&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
-@theme {
+:root {
   --font-heading: "Outfit", sans-serif;
   --font-sans: "Inter", sans-serif;
   --font-mono: "Space Mono", monospace;
@@ -10,10 +10,16 @@
   /* Primary Font: Vazirmatn (User Requested) */
   --font-arabic: "Vazirmatn", sans-serif;
 
-  --color-primary-black: #050505;
+  /* Dynamic Theme Colors - Linked to Admin Dashboard */
+  --color-primary-black: var(--bg-black, #050505);
+  --color-accent-violet: var(--accent-violet, #8b5cf6);
+  --color-accent-blue: var(--accent-blue, #3b82f6);
   --color-gh-dark: #0d1117;
-  --color-accent-violet: #8b5cf6;
-  --color-accent-blue: #3b82f6;
+
+  /* Dynamic Effects */
+  --accent-glow: rgba(var(--accent-rgb, 139, 92, 246), 0.3);
+  --accent-soft: rgba(var(--accent-rgb, 139, 92, 246), 0.1);
+  --radius-global: var(--border-radius, 16px);
 
   --z-999: 999;
   --z-50: 50;
@@ -31,7 +37,7 @@
   body {
     background-color: var(--color-primary-black);
     color: white;
-    font-family: var(--font-sans);
+    font-family: var(--font-primary, var(--font-sans));
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }

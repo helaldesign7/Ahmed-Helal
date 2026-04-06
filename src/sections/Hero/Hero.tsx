@@ -89,17 +89,32 @@ const FloatingShape = ({ index }: { index: number }) => {
 
 export const Hero = ({ lang }: HeroProps) => {
   const { siteContent } = useAdmin();
-  const { hero, marquee } = siteContent;
+  
+  // Provide robust fallbacks if siteContent is malformed
+  const hero = siteContent?.hero || {
+    title: { en: "Ahmed Helal", ar: "أحمد هلال" },
+    subtitle: { en: "Visual Designer", ar: "مصمم بصري" },
+    badge: { en: "Visual Designer", ar: "مصمم بصري" },
+    ctaPrimary: { en: "Start", ar: "ابدأ" },
+    ctaSecondary: { en: "Work", ar: "أعمالي" },
+    floatingKeywords: [],
+    background: { type: 'image', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop' }
+  };
+  
+  const marquee = siteContent?.marquee || { logos: [] };
 
   // Gooey/Viscous transition config
   const springConfig = { type: "spring", stiffness: 150, damping: 20, mass: 1.2 } as const;
 
+  const bgUrl = hero?.background?.url || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop';
+  const bgType = hero?.background?.type || 'image';
+
   return (
     <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-20 bg-transparent">
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        {hero.background.type === 'video' ? (
+        {bgType === 'video' ? (
           <motion.video
-            key={hero.background.url}
+            key={bgUrl}
             autoPlay
             muted
             loop
@@ -108,12 +123,12 @@ export const Hero = ({ lang }: HeroProps) => {
             animate={{ scale: [1.05, 1.15, 1.05] }}
             transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <source src={hero.background.url} type="video/mp4" />
+            <source src={bgUrl} type="video/mp4" />
           </motion.video>
         ) : (
           <motion.img 
-            key={hero.background.url}
-            src={hero.background.url}
+            key={bgUrl}
+            src={bgUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             animate={{ scale: [1.05, 1.1, 1.05] }}
@@ -133,8 +148,8 @@ export const Hero = ({ lang }: HeroProps) => {
 
       <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none overflow-hidden">
          <div className="relative w-full max-w-7xl h-full">
-            {hero.floatingKeywords.map((item: { [key in Language]: string }, i: number) => (
-              <FloatingTag key={i} word={item[lang]} index={i} />
+            {(hero?.floatingKeywords || []).map((item: { [key in Language]: string }, i: number) => (
+              <FloatingTag key={i} word={item?.[lang] || item?.en || ''} index={i} />
             ))}
             {[...Array(15)].map((_, i) => (
               <FloatingShape key={i} index={i} />
@@ -157,7 +172,7 @@ export const Hero = ({ lang }: HeroProps) => {
           <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
              <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(139,92,246,1)] animate-pulse" />
              <span className="text-[10px] md:text-xs font-mono font-black tracking-[0.4em] uppercase text-white/40">
-               {hero.badge[lang]}
+               {hero?.badge?.[lang] || hero?.badge?.en || 'VISUAL DESIGNER'}
              </span>
           </div>
         </motion.div>
@@ -167,7 +182,7 @@ export const Hero = ({ lang }: HeroProps) => {
           transition={springConfig}
           className="text-7xl md:text-[140px] font-heading font-black mb-8 tracking-tighter text-white uppercase leading-[0.85] select-none"
         >
-          {hero.title[lang]}
+          {hero?.title?.[lang] || hero?.title?.en || 'Ahmed Helal'}
         </motion.h1>
 
         <motion.p 
@@ -176,7 +191,7 @@ export const Hero = ({ lang }: HeroProps) => {
           transition={{ delay: 0.8, duration: 1.2 }}
           className="text-lg md:text-2xl text-white/30 mb-20 max-w-3xl mx-auto leading-relaxed font-sans font-light"
         >
-          {hero.subtitle[lang]}
+          {hero?.subtitle?.[lang] || hero?.subtitle?.en || ''}
         </motion.p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-10 mt-8">
@@ -185,7 +200,7 @@ export const Hero = ({ lang }: HeroProps) => {
               className="w-full sm:w-auto h-20 px-24 text-[12px] shadow-[0_0_50px_rgba(139,92,246,0.3)] hover:shadow-[0_0_80px_rgba(139,92,246,0.5)]"
               onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              {hero.ctaPrimary[lang]}
+              {hero?.ctaPrimary?.[lang] || hero?.ctaPrimary?.en || 'Start'}
             </Button>
 
             <Button
@@ -193,7 +208,7 @@ export const Hero = ({ lang }: HeroProps) => {
               className="w-full sm:w-auto h-20 px-16 text-[12px] border-white/10 hover:border-white/30"
               onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              {hero.ctaSecondary[lang]}
+              {hero?.ctaSecondary?.[lang] || hero?.ctaSecondary?.en || 'Work'}
             </Button>
         </div>
       </motion.div>
@@ -201,8 +216,8 @@ export const Hero = ({ lang }: HeroProps) => {
       {/* Corporate Marquee (Permanent Motion Loop) */}
       <div className="absolute bottom-16 w-full overflow-hidden pointer-events-none opacity-20 hover:opacity-50 transition-opacity">
          <div className="flex w-fit animate-marquee grayscale invert gap-24 pr-24">
-            {[...marquee.logos, ...marquee.logos, ...marquee.logos].map((logo, i) => (
-              <img key={i} src={logo.image} alt={logo.name} className="h-4 md:h-6 object-contain shrink-0" />
+            {[...(marquee?.logos || []), ...(marquee?.logos || []), ...(marquee?.logos || [])].map((logo, i) => (
+              <img key={i} src={logo?.image} alt={logo?.name} className="h-4 md:h-6 object-contain shrink-0" />
             ))}
          </div>
          

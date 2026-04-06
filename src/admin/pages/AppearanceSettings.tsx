@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Palette, Baseline, MonitorPlay, Save } from 'lucide-react';
+import { Palette, Baseline, MonitorPlay, Save, Image as ImageIcon } from 'lucide-react';
 import { useAdmin } from '../../contexts/useAdmin';
 import { useOutletContext } from 'react-router-dom';
 
 export const AppearanceSettings = () => {
-  const { appearance, setAppearance } = useAdmin();
+  const { appearance, setAppearance, syncSettings } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
-  const [activeTab, setActiveTab] = useState<'colors' | 'typography' | 'elements'>('colors');
+  const [activeTab, setActiveTab] = useState<'colors' | 'typography' | 'elements' | 'branding'>('colors');
   const [isSaving, setIsSaving] = useState(false);
 
   const isRtl = lang === 'ar';
@@ -20,7 +20,8 @@ export const AppearanceSettings = () => {
       tabs: {
         colors: 'Colors & Glow',
         typography: 'Typography',
-        elements: 'Layout & Elements'
+        elements: 'Layout & Elements',
+        branding: 'Branding & Assets'
       },
       colors: {
         title: 'Core Palette',
@@ -44,6 +45,13 @@ export const AppearanceSettings = () => {
           desc: 'Enables translucent frosted overlays'
         },
         previewModule: 'Module'
+      },
+      branding: {
+        title: 'Identity & Assets',
+        logoLabel: 'Website Logo',
+        logoHint: 'Recommended: Transparent PNG or SVG',
+        faviconLabel: 'Browser Tab Icon (Favicon)',
+        faviconHint: 'Recommended: 32x32 PNG or ICO'
       }
     },
     ar: {
@@ -54,7 +62,8 @@ export const AppearanceSettings = () => {
       tabs: {
         colors: 'الألوان والوهج',
         typography: 'الخطوط',
-        elements: 'تخطيط العناصر'
+        elements: 'تخطيط العناصر',
+        branding: 'الهوية والبصمة'
       },
       colors: {
         title: 'لوحة الألوان الأساسية',
@@ -78,17 +87,45 @@ export const AppearanceSettings = () => {
           desc: 'تفعيل تراكبات شبه شفافة وضبابية'
         },
         previewModule: 'وحدة برمجية'
+      },
+      branding: {
+        title: 'الهوية والأصول البصرية',
+        logoLabel: 'شعار الموقع (Logo)',
+        logoHint: 'يفضل: صيغة PNG شفافة أو SVG',
+        faviconLabel: 'أيقونة التبويب (Favicon)',
+        faviconHint: 'يفضل: مقاس 32x32 بصيغة PNG أو ICO'
       }
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 800);
+    await syncSettings({ appearance });
+    setIsSaving(false);
   };
 
-  const updateAppearance = (key: keyof typeof appearance, value: any) => {
+  const updateAppearance = (key: string, value: any) => {
     setAppearance(prev => ({ ...prev, [key]: value }));
+    
+    // 🚀 LIVE PREVIEW - Inject directly for instant feedback
+    if (key === 'accentColor') {
+      const root = document.documentElement;
+      root.style.setProperty('--color-accent-violet', value);
+      root.style.setProperty('--accent-violet', value);
+      
+      // Calculate RGB for transparency-based elements
+      const r = parseInt(value.slice(1, 3), 16);
+      const g = parseInt(value.slice(3, 5), 16);
+      const b = parseInt(value.slice(5, 7), 16);
+      root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+    }
+    
+    if (key === 'bgColor') {
+      const root = document.documentElement;
+      root.style.setProperty('--color-primary-black', value);
+      root.style.setProperty('--bg-black', value);
+      root.style.setProperty('--bg-surface', `${value}E6`);
+    }
   };
 
   return (
@@ -130,6 +167,13 @@ export const AppearanceSettings = () => {
         >
           <MonitorPlay className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-widest">{t[lang].tabs.elements}</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('branding')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${activeTab === 'branding' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          <span className="text-[10px] font-black uppercase tracking-widest">{t[lang].tabs.branding}</span>
         </button>
       </div>
 
@@ -270,6 +314,68 @@ export const AppearanceSettings = () => {
                    <span className="text-[10px] font-black text-white/40 uppercase">{t[lang].elements.previewModule}</span>
                  </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'branding' && (
+          <div className="space-y-6">
+            <h2 className="text-sm font-black uppercase tracking-widest text-white border-b border-white/5 pb-4">{t[lang].branding.title}</h2>
+            
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${isRtl ? 'text-right' : ''}`}>
+               <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{t[lang].branding.logoLabel}</label>
+                  <div className="p-6 bg-black/50 border border-white/5 rounded-2xl flex flex-col items-center gap-4">
+                     {appearance.logoUrl ? (
+                        <div className="relative group">
+                           <img src={appearance.logoUrl} alt="Logo" className="h-16 object-contain" />
+                           <button 
+                              onClick={() => updateAppearance('logoUrl', '')}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                           >×</button>
+                        </div>
+                     ) : (
+                        <div className="w-16 h-16 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center text-white/10">
+                           <ImageIcon className="w-8 h-8" />
+                        </div>
+                     )}
+                     <input 
+                        type="text" 
+                        placeholder="https://example.com/logo.png"
+                        value={appearance.logoUrl || ''}
+                        onChange={(e) => updateAppearance('logoUrl', e.target.value)}
+                        className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-accent-violet/50"
+                     />
+                     <p className="text-[9px] font-mono text-white/20 uppercase text-center">{t[lang].branding.logoHint}</p>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{t[lang].branding.faviconLabel}</label>
+                  <div className="p-6 bg-black/50 border border-white/5 rounded-2xl flex flex-col items-center gap-4">
+                     {appearance.faviconUrl ? (
+                        <div className="relative group">
+                           <img src={appearance.faviconUrl} alt="Favicon" className="w-10 h-10 object-contain" />
+                           <button 
+                              onClick={() => updateAppearance('faviconUrl', '')}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                           >×</button>
+                        </div>
+                     ) : (
+                        <div className="w-10 h-10 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center text-white/10">
+                           <Palette className="w-5 h-5" />
+                        </div>
+                     )}
+                     <input 
+                        type="text" 
+                        placeholder="https://example.com/favicon.ico"
+                        value={appearance.faviconUrl || ''}
+                        onChange={(e) => updateAppearance('faviconUrl', e.target.value)}
+                        className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-accent-violet/50"
+                     />
+                     <p className="text-[9px] font-mono text-white/20 uppercase text-center">{t[lang].branding.faviconHint}</p>
+                  </div>
+               </div>
             </div>
           </div>
         )}

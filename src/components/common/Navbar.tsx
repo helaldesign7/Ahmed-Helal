@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LayoutDashboard, Rocket } from 'lucide-react';
 import { type Language } from '../../data/content';
+import { type SectionBlueprint } from '../../types/admin';
 import { LoginModal } from '../auth/LoginModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdmin } from '../../contexts/useAdmin';
@@ -15,7 +16,7 @@ interface NavbarProps {
 
 export const Navbar = ({ lang, onLanguageToggle }: NavbarProps) => {
   const { user } = useAuth();
-  const { siteContent, sections } = useAdmin();
+  const { appearance, siteContent, sections } = useAdmin();
   const [activeTab, setActiveTab] = useState('Home');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -51,22 +52,33 @@ export const Navbar = ({ lang, onLanguageToggle }: NavbarProps) => {
 
   // 🔄 Dynamic nav items injected from Admin Sort Order
   const navItems = useMemo(() => {
-    const labelMap: Record<string, { en: string, ar: string }> = {
-      hero: { en: "Home", ar: "الرئيسية" },
-      projects: { en: "Portfolio", ar: "الأعمال" },
-      services: { en: "Works", ar: "خدماتي" },
-      marquee: { en: "Creative", ar: "إبداع" },
-      process: { en: "Process", ar: "المسار" }
-    };
+    // If sections is not loaded yet or empty, provide a basic default
+    const safeSections: SectionBlueprint[] = sections.length > 0 ? sections : [
+      { id: 'hero', name: 'Home', isVisible: true, inNavbar: true, order: 0, navLabel: { en: 'Home', ar: 'الرئيسية' }, type: 'core' },
+      { id: 'projects', name: 'Portfolio', isVisible: true, inNavbar: true, order: 1, navLabel: { en: 'Portfolio', ar: 'الأعمال' }, type: 'content' },
+      { id: 'contact', name: 'Contact', isVisible: true, inNavbar: true, order: 2, navLabel: { en: 'Contact', ar: 'تواصل' }, type: 'content' }
+    ];
 
-    return sections
-      .filter(s => s.isVisible && labelMap[s.id])
-      .sort((a, b) => a.order - b.order)
-      .map(s => ({
-        name: labelMap[s.id],
-        id: s.id === 'hero' ? 'Home' : s.id.charAt(0).toUpperCase() + s.id.slice(1),
-        section: s.id
-      }));
+    return safeSections
+      .filter(s => s.isVisible && s.inNavbar)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map(s => {
+        const fallbackLabels: Record<string, { en: string, ar: string }> = {
+          hero: { en: 'Home', ar: 'الرئيسية' },
+          projects: { en: 'Portfolio', ar: 'الأعمال' },
+          services: { en: 'Services', ar: 'خدماتي' },
+          process: { en: 'Process', ar: 'المسار' },
+          contact: { en: 'Contact', ar: 'تواصل' }
+        };
+
+        const name = s.navLabel || fallbackLabels[s.id] || { en: s.name, ar: s.name };
+
+        return {
+          name,
+          id: s.id === 'hero' ? 'Home' : s.id.charAt(0).toUpperCase() + s.id.slice(1),
+          section: s.id
+        };
+      });
   }, [sections]);
 
   useEffect(() => {
@@ -118,9 +130,13 @@ export const Navbar = ({ lang, onLanguageToggle }: NavbarProps) => {
           {/* Logo */}
           <motion.div 
             onClick={() => scrollToSection('Home', 'hero')}
-            className={`font-heading font-black text-2xl md:text-3xl tracking-tighter text-white hover:text-accent-violet transition-all duration-300 cursor-pointer select-none shrink-0 ${isRtl ? 'ml-8' : 'mr-8'}`}
+            className={`flex items-center gap-3 font-heading font-black text-2xl md:text-3xl tracking-tighter text-white hover:text-accent-violet transition-all duration-300 cursor-pointer select-none shrink-0 ${isRtl ? 'ml-8' : 'mr-8'}`}
           >
-            {logoText}
+            {appearance?.logoUrl ? (
+              <img src={appearance.logoUrl} alt="Logo" className="h-8 md:h-10 w-auto object-contain" />
+            ) : (
+              logoText
+            )}
           </motion.div>
 
           {/* Navigation Pill */}
@@ -135,7 +151,7 @@ export const Navbar = ({ lang, onLanguageToggle }: NavbarProps) => {
                   {activeTab === item.id && (
                     <motion.div
                       layoutId="nav-glow-pill"
-                      className="absolute inset-0 bg-accent-violet rounded-full z-[-1] shadow-[0_0_20px_rgba(139,92,246,0.3)]"
+                      className="absolute inset-0 bg-accent-violet rounded-full z-[-1] shadow-[0_0_20px_var(--accent-glow)]"
                       transition={{ type: "spring", stiffness: 300, damping: 25, mass: 1 }}
                     />
                   )}

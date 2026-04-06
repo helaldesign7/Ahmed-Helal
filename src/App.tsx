@@ -1,10 +1,11 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { ProtectedRoute } from './admin/components/ProtectedRoute';
 import { AdminLayout } from './admin/layout/AdminLayout';
 import CosmicBackground from './components/CosmicBackground';
+import { useAdmin } from './contexts/useAdmin';
 
 // Lazy load pages
 const PublicHome = lazy(() => import('./pages/PublicHome').then(m => ({ default: m.PublicHome })));
@@ -27,10 +28,63 @@ const PageLoader = () => (
   </div>
 );
 
+// --- Global Theme Controller ---
+const GlobalTheme = () => {
+  const { appearance, siteContent } = useAdmin();
+
+  useEffect(() => {
+    if (!appearance) return;
+
+    // 1. Inject CSS Variables
+    const root = document.documentElement;
+    const accent = appearance.accentColor || '#8B5CF6';
+    const bg = appearance.bgColor || '#000000';
+    
+    const hexToRgb = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `${r}, ${g}, ${b}`;
+    };
+
+    const rgb = hexToRgb(accent);
+    
+    // 🔥 MASTER SYNC - Update every variable name used in the system
+    root.style.setProperty('--color-accent-violet', accent);
+    root.style.setProperty('--accent-violet', accent);
+    root.style.setProperty('--accent-rgb', rgb);
+    
+    root.style.setProperty('--color-primary-black', bg);
+    root.style.setProperty('--bg-black', bg);
+    root.style.setProperty('--bg-surface', `${bg}E6`); // Glassmorphism
+    
+    root.style.setProperty('--border-radius', appearance.borderRadius || '16px');
+    root.style.setProperty('--font-primary', appearance.fontFamily || 'Inter');
+    
+    // 2. Update Favicon & Title
+    if (appearance.faviconUrl) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = appearance.faviconUrl;
+    }
+
+    if (siteContent?.hero?.title?.en) {
+       document.title = siteContent.hero.title.en + " | Portfolio";
+    }
+  }, [appearance, siteContent]);
+
+  return null;
+};
+
 const App = () => {
   return (
     <AdminProvider>
       <AuthProvider>
+        <GlobalTheme />
         <CosmicBackground />
         <Router>
           <Suspense fallback={<PageLoader />}>

@@ -46,7 +46,10 @@ export const PublicHome: FC = () => {
       <Navbar lang={lang} onLanguageToggle={toggleLanguage} />
 
       {/* Sections in Architectural Order injected dynamically from Admin */}
-      {sections.filter(s => s.isVisible).map(section => {
+      {sections
+        .filter(s => s.isVisible)
+        .sort((a, b) => a.order - b.order)
+        .map(section => {
         const Component = sectionComponentMap[section.id];
         if (!Component) return null;
         

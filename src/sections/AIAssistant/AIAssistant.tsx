@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { ChatPanel } from './ChatPanel';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAdmin } from '../../contexts/useAdmin';
 
 interface AIAssistantProps {
   lang: 'en' | 'ar';
@@ -11,11 +12,14 @@ interface AIAssistantProps {
 export const AIAssistant = ({ lang }: AIAssistantProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { config } = useAdmin();
   const isRtl = lang === 'ar';
 
+  const assistantName = config.ai.assistantName || (lang === 'ar' ? 'أورا' : 'AURA');
+
   const t = {
-    en: 'Ask AURA AI',
-    ar: 'اسأل أورا الذكية'
+    en: `Ask ${assistantName}`,
+    ar: `اسأل ${assistantName}`
   };
 
   return (

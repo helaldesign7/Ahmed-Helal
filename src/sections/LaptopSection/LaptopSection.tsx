@@ -161,15 +161,15 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
                                    </div>
                                 </motion.div>
 
-                                <div className="relative z-50">
+                                 <div className="relative z-50">
                                    <h3 className="text-base sm:text-5xl font-black tracking-tighter uppercase text-white mb-0.5 leading-none select-none">
-                                      {laptop.name[lang]}
+                                      {laptop?.name?.[lang] || ''}
                                    </h3>
                                    <div className="text-accent-violet font-mono text-[5px] sm:text-[10px] uppercase tracking-[0.3em] font-black mb-1 sm:mb-4 opacity-80 select-none">
-                                      {laptop.jobTitle[lang]}
+                                      {laptop?.jobTitle?.[lang] || ''}
                                    </div>
                                    <p className="text-white/30 text-[4px] sm:text-[10px] leading-relaxed max-w-[140px] sm:max-w-md mx-auto tracking-wide">
-                                      {laptop.intro[lang]}
+                                      {laptop?.intro?.[lang] || ''}
                                    </p>
                                  </div>
                              </div>
@@ -180,13 +180,13 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
                                       onClick={(e) => { e.stopPropagation(); setView('portfolio'); }}
                                       className="btn-glass flex-1 sm:flex-none px-3 sm:px-10 py-1.5 sm:py-3.5 bg-accent-violet text-white text-[5px] sm:text-[9px] font-black uppercase tracking-[0.2em] cursor-pointer"
                                    >
-                                      {laptop.ctas.portfolio[lang]}
+                                      {laptop?.ctas?.portfolio?.[lang] || 'Portfolio'}
                                    </motion.button>
                                    <motion.button
                                       onClick={(e) => { e.stopPropagation(); setView('cv'); }}
                                       className="btn-glass flex-1 sm:flex-none px-3 sm:px-8 py-1.5 sm:py-3.5 bg-white/5 text-white/50 text-[5px] sm:text-[9px] font-black uppercase tracking-[0.2em] cursor-pointer"
                                    >
-                                      {laptop.ctas.cv[lang]}
+                                      {laptop?.ctas?.cv?.[lang] || 'CV'}
                                    </motion.button>
                                 </div>
 
@@ -215,7 +215,7 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
                                 className="btn-glass p-3 md:p-4 bg-primary-black text-white hover:text-accent-violet cursor-pointer flex items-center gap-2"
                               >
                                 <ArrowLeft className="w-4 h-4" />
-                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest hidden md:inline">{laptop.ctas.back[lang]}</span>
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest hidden md:inline">{laptop?.ctas?.back?.[lang] || 'Back'}</span>
                               </button>
                             </div>
                             <iframe 

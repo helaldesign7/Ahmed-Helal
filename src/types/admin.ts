@@ -110,6 +110,8 @@ export interface Appearance {
   fontFamily: string;
   borderRadius: string;
   glassmorphism: boolean;
+  logoUrl?: string;
+  faviconUrl?: string;
 }
 
 export interface ServiceItem {
@@ -151,6 +153,8 @@ export interface SectionBlueprint {
   isVisible: boolean;
   type: 'core' | 'content' | 'widget';
   order: number;
+  inNavbar: boolean;
+  navLabel: { en: string; ar: string };
 }
 
 export function hexToRgb(hex: string) {
@@ -284,10 +288,18 @@ export interface AdminContextType {
   deleteMedia: (assetId: string) => Promise<void>;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
+  syncSettings: (overrides?: {
+    appearance?: Appearance;
+    config?: AdminConfig;
+    siteContent?: Content;
+    sections?: SectionBlueprint[];
+  }) => Promise<void>;
   toggleVisibility: (id: SectionId) => void;
+  toggleNavbarVisibility: (id: SectionId) => void;
   moveSection: (id: SectionId, direction: 'up' | 'down') => void;
   reorderSections: (startIndex: number, endIndex: number) => void;
   setSectionsOrder: (newSections: SectionBlueprint[]) => void;
+  updateSectionLabel: (id: SectionId, labels: { en: string; ar: string }) => void;
   reorderProjects: (projectId: number, newIndex: number) => Promise<void>;
   
   stats: SystemStats;
@@ -319,14 +331,14 @@ export interface AdminContextType {
 }
 
 export const defaultBlueprint: SectionBlueprint[] = [
-  { id: 'hero', name: 'Hero Scene', isVisible: true, type: 'core', order: 0 },
-  { id: 'laptop', name: 'Interactive Laptop 3D', isVisible: true, type: 'core', order: 1 },
-  { id: 'projects', name: 'Featured Work & Projects', isVisible: true, type: 'content', order: 2 },
-  { id: 'services', name: 'Services Universe', isVisible: true, type: 'content', order: 3 },
-  { id: 'marquee', name: 'Client Logos Marquee', isVisible: true, type: 'widget', order: 4 },
-  { id: 'process', name: 'Our Process', isVisible: true, type: 'content', order: 5 },
-  { id: 'start-project', name: 'Start a Project Inquiry', isVisible: true, type: 'core', order: 6 },
-  { id: 'testimonials', name: 'Client Testimonials', isVisible: true, type: 'content', order: 7 },
-  { id: 'metrics', name: 'Global Statistics', isVisible: true, type: 'widget', order: 8 },
-  { id: 'contact', name: 'Contact Call to Action', isVisible: true, type: 'core', order: 9 }
+  { id: 'hero', name: 'Hero Scene', isVisible: true, type: 'core', order: 0, inNavbar: true, navLabel: { en: 'Home', ar: 'الرئيسية' } },
+  { id: 'laptop', name: 'Interactive Laptop 3D', isVisible: true, type: 'core', order: 1, inNavbar: false, navLabel: { en: 'Experience', ar: 'التجربة' } },
+  { id: 'projects', name: 'Featured Work & Projects', isVisible: true, type: 'content', order: 2, inNavbar: true, navLabel: { en: 'Portfolio', ar: 'معرض الأعمال' } },
+  { id: 'services', name: 'Services Universe', isVisible: true, type: 'content', order: 3, inNavbar: true, navLabel: { en: 'Services', ar: 'خدماتي' } },
+  { id: 'marquee', name: 'Client Logos Marquee', isVisible: true, type: 'widget', order: 4, inNavbar: false, navLabel: { en: 'Clients', ar: 'عملائي' } },
+  { id: 'process', name: 'Our Process', isVisible: true, type: 'content', order: 5, inNavbar: true, navLabel: { en: 'Process', ar: 'المسار' } },
+  { id: 'start-project', name: 'Start a Project Inquiry', isVisible: true, type: 'core', order: 6, inNavbar: false, navLabel: { en: 'Inquiry', ar: 'طلب عمل' } },
+  { id: 'testimonials', name: 'Client Testimonials', isVisible: true, type: 'content', order: 7, inNavbar: false, navLabel: { en: 'Reviews', ar: 'آراء' } },
+  { id: 'metrics', name: 'Global Statistics', isVisible: true, type: 'widget', order: 8, inNavbar: false, navLabel: { en: 'Stats', ar: 'إحصائيات' } },
+  { id: 'contact', name: 'Contact Call to Action', isVisible: true, type: 'core', order: 9, inNavbar: true, navLabel: { en: 'Contact', ar: 'تواصل' } }
 ];

@@ -48,42 +48,98 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // --- 2. Data Fetching ---
   const fetchGlobalData = useCallback(async () => {
     try {
-      // setLoading(true); // Can be enabled if full overlay is desired on every refresh
+      setLoading(true);
+      console.log('[AdminContext] Starting secure data fetch sequence...');
 
-      const [
-        { data: dbProjects },
-        { data: dbLeads },
-        { data: dbSettings },
-        { data: dbCrmClients },
-        { data: dbCrmProjects },
-        { data: dbMedia },
-        { data: dbLogs }
-      ] = await Promise.all([
-        supabase.from('projects').select('*').order('displayOrder', { ascending: true }),
-        supabase.from('leads').select('*').order('date', { ascending: false }),
-        supabase.from('site_settings').select('content').eq('id', 'global').maybeSingle(),
-        supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
-        supabase.from('crm_projects').select('*').order('created_at', { ascending: false }),
-        supabase.from('media_assets').select('*').order('created_at', { ascending: false }),
-        supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(100)
-      ]);
-
-      if (dbProjects) setProjects(dbProjects as Project[]);
-      if (dbLeads) setLeads(dbLeads as Lead[]);
-      if (dbCrmClients) setCrmClients(dbCrmClients as CRMClient[]);
-      if (dbCrmProjects) setCrmProjects(dbCrmProjects as CRMProject[]);
-      if (dbMedia) setMediaAssets(dbMedia as MediaAsset[]);
-      if (dbLogs) setActivityLogs(dbLogs as ActivityLog[]);
-
-      if (dbSettings?.content) {
-        const s = dbSettings.content;
-        if (s.appearance) setAppearance(s.appearance);
-        if (s.config) setConfig(s.config);
-        if (s.siteContent) setSiteContent(s.siteContent);
-        if (s.sections) setSections(s.sections);
+      try {
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (error) throw error;
+        if (data) setActivityLogs(data as ActivityLog[]);
+      } catch (err) {
+        console.warn('[AdminContext] Activity logs fetch error:', err);
       }
-    } catch (err) {
-      console.error("Fetch Error:", err);
+
+      // 1. Projects
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .order('displayorder', { ascending: true });
+        if (error) throw error;
+        if (data) setProjects(data as Project[]);
+      } catch (err) {
+        console.warn('[AdminContext] Projects fetch error:', err);
+      }
+
+      // 2. Leads
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .select('*')
+          .order('date', { ascending: false });
+        if (error) throw error;
+        if (data) setLeads(data as Lead[]);
+      } catch (err) {
+        console.warn('[AdminContext] Leads fetch error:', err);
+      }
+
+      // 3. CRM Clients & Projects
+      try {
+        const [{ data: clients }, { data: crmProjs }] = await Promise.all([
+          supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
+          supabase.from('crm_projects').select('*').order('created_at', { ascending: false })
+        ]);
+        if (clients) setCrmClients(clients as CRMClient[]);
+        if (crmProjs) setCrmProjects(crmProjs as CRMProject[]);
+      } catch (err) {
+        console.warn('[AdminContext] CRM fetch error:', err);
+      }
+
+      // 4. Site Settings (Critical Content)
+      try {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('content')
+          .eq('id', 'global')
+          .maybeSingle();
+        
+        if (error) throw error;
+        
+        if (data?.content) {
+          const s = data.content;
+          if (s.appearance) setAppearance(prev => ({ ...prev, ...s.appearance }));
+          if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
+          if (s.siteContent) {
+            setSiteContent(prev => {
+              const merged = { ...prev };
+              Object.entries(s.siteContent).forEach(([key, value]) => {
+                const sectionKey = key as keyof Content;
+                if (!value) return;
+
+                if (Array.isArray(value)) {
+                  (merged as Record<string, unknown>)[sectionKey] = value;
+                } else if (typeof value === 'object' && prev[sectionKey]) {
+                  (merged as Record<string, unknown>)[sectionKey] = { 
+                    ...(prev[sectionKey] as object), 
+                    ...(value as object) 
+                  };
+                } else {
+                  (merged as Record<string, unknown>)[sectionKey] = value;
+                }
+              });
+              return merged;
+            });
+          }
+          if (s.sections) setSections(s.sections);
+        }
+      } catch (err) {
+        console.error('[AdminContext] Critical Settings failed:', err);
+      }
+      
     } finally {
       setLoading(false);
     }
@@ -91,28 +147,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     fetchGlobalData();
-  }, [fetchGlobalData]);
-
-  // Real-time listener for site settings
-  useEffect(() => {
-    const channel = supabase
-      .channel('site_settings_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'site_settings'
-        },
-        () => {
-          fetchGlobalData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [fetchGlobalData]);
 
   // --- 3. Logging Helper ---
@@ -130,7 +164,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // --- 4. Persistence Helpers ---
+  // --- 4. Persistence & Sync ---
   const syncSettings = useCallback(async (overrides?: {
     appearance?: Appearance;
     config?: AdminConfig;
@@ -153,17 +187,74 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
-      if (error) {
-        console.error("SAVE FAILED:", error.message);
-        return;
-      }
-
-      console.log("SAVED TO DB");
-      await fetchGlobalData();
+      if (error) throw error;
+      console.log("[AdminContext] Global Sync Success");
     } catch (err) {
-      console.error("Failed:", err);
+      console.error("[AdminContext] Global Sync Failed:", err);
     }
-  }, [appearance, config, siteContent, sections, fetchGlobalData]);
+  }, [appearance, config, siteContent, sections]);
+
+  const toggleVisibility = async (id: SectionId) => {
+    setSections(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
+      syncSettings({ sections: updated });
+      logActivity('update', 'section_visibility', id);
+      return updated;
+    });
+  };
+
+  const toggleNavbarVisibility = async (id: SectionId) => {
+    setSections(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, inNavbar: !s.inNavbar } : s);
+      syncSettings({ sections: updated });
+      logActivity('update', 'section_navbar', id);
+      return updated;
+    });
+  };
+
+  const moveSection = async (id: SectionId, direction: 'up' | 'down') => {
+    setSections(prev => {
+      const index = prev.findIndex(s => s.id === id);
+      if (index === -1) return prev;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+
+      const updated = [...prev];
+      [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+      
+      const final = updated.map((s, i) => ({ ...s, order: i }));
+      syncSettings({ sections: final });
+      logActivity('reorder', 'section_move', id);
+      return final;
+    });
+  };
+
+  const reorderSections = (startIndex: number, endIndex: number) => {
+    setSections(prev => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(startIndex, 1);
+      result.splice(endIndex, 0, removed);
+      const ordered = result.map((s, i) => ({ ...s, order: i }));
+      syncSettings({ sections: ordered });
+      logActivity('reorder', 'sections_dnd');
+      return ordered;
+    });
+  };
+
+  const setSectionsOrder = async (newSections: SectionBlueprint[]) => {
+    const final = newSections.map((s, i) => ({ ...s, order: i }));
+    setSections(final);
+    await syncSettings({ sections: final });
+  };
+
+  const updateSectionLabel = (id: SectionId, labels: { en: string; ar: string }) => {
+    setSections(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, navLabel: labels } : s);
+      syncSettings({ sections: updated });
+      logActivity('update', 'section_label', id, labels);
+      return updated;
+    });
+  };
 
   // --- 5. CRUD Operations ---
   
@@ -512,51 +603,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearNotifications = () => setNotifications([]);
 
-  const toggleVisibility = (id: SectionId) => {
-    setSections(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
-      syncSettings({ sections: updated });
-      logActivity('update', 'section_visibility', id);
-      return updated;
-    });
-  };
-
-  const moveSection = (id: SectionId, direction: 'up' | 'down') => {
-    setSections(prev => {
-      const index = prev.findIndex(s => s.id === id);
-      if (index === -1) return prev;
-
-      const newSections = [...prev];
-      if (direction === 'up' && index > 0) {
-        [newSections[index], newSections[index - 1]] = [newSections[index - 1], newSections[index]];
-      } else if (direction === 'down' && index < newSections.length - 1) {
-        [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
-      }
-      
-      const ordered = newSections.map((s, i) => ({ ...s, order: i }));
-      syncSettings({ sections: ordered });
-      return ordered;
-    });
-  };
-
-  const reorderSections = (startIndex: number, endIndex: number) => {
-    setSections(prev => {
-      const result = Array.from(prev);
-      const [removed] = result.splice(startIndex, 1);
-      result.splice(endIndex, 0, removed);
-      const ordered = result.map((s, i) => ({ ...s, order: i }));
-      syncSettings({ sections: ordered });
-      logActivity('reorder', 'sections');
-      return ordered;
-    });
-  };
-
-  const setSectionsOrder = (newSections: SectionBlueprint[]) => {
-    const ordered = newSections.map((s, i) => ({ ...s, order: i }));
-    setSections(ordered);
-    syncSettings({ sections: ordered });
-    logActivity('reorder', 'sections_bulk');
-  };
 
   const updateAiConfig = async (updates: Partial<AdminConfig['ai']>) => {
     const newAi = { 
@@ -705,7 +751,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mediaAssets, setMediaAssets, 
       loading, uploadMedia, deleteMedia,
       markNotificationAsRead, clearNotifications,
-      toggleVisibility, moveSection, reorderSections, setSectionsOrder, reorderProjects,
+      syncSettings, toggleVisibility, toggleNavbarVisibility, moveSection, reorderSections, setSectionsOrder, updateSectionLabel, reorderProjects,
       stats, updateStats,
       activityLogs, logActivity,
       conversations, fetchConversations, fetchMessages, updateAiConfig,

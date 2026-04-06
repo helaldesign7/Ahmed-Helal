@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutList, GripVertical, ArrowUp, ArrowDown, Image as ImageIcon, MessageSquareQuote, Link as LinkIcon, Edit3, X } from 'lucide-react';
+import { LayoutList, GripVertical, ArrowUp, ArrowDown, Image as ImageIcon, MessageSquareQuote, Link as LinkIcon, Edit3, X, Type } from 'lucide-react';
 import { 
   DndContext, 
   closestCenter,
@@ -27,11 +27,16 @@ import type { SectionBlueprint, SectionId } from '../../types/admin';
 
 // --- Sortable Item Component ---
 const SortableSectionItem = ({ 
-  section, index, total, lang, t, isRtl, moveSection, toggleVisibility, activeEditor, setActiveEditor 
+  section, index, total, lang, t, isRtl, moveSection, toggleVisibility, toggleNavbarVisibility, activeEditor, setActiveEditor, setEditingLabel 
 }: { 
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   section: SectionBlueprint; index: number; total: number; lang: 'en'|'ar'; t: any; isRtl: boolean; 
-  moveSection: (id: SectionId, direction: 'up'|'down') => void; toggleVisibility: (id: SectionId) => void; activeEditor: string | null; setActiveEditor: (id: string|null) => void;
+  moveSection: (id: SectionId, direction: 'up'|'down') => void; 
+  toggleVisibility: (id: SectionId) => void;
+  toggleNavbarVisibility: (id: SectionId) => void;
+  activeEditor: string | null; 
+  setActiveEditor: (id: string|null) => void;
+  setEditingLabel: (section: SectionBlueprint | null) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
 
@@ -63,9 +68,27 @@ const SortableSectionItem = ({
             <ArrowDown className="w-3 h-3" />
           </button>
           <div className="w-px h-6 bg-white/10 mx-2"></div>
+          
+          <button 
+            onClick={() => toggleNavbarVisibility(section.id)}
+            title={lang === 'ar' ? 'تبديل الظهور في القائمة العلوية' : 'Toggle Navbar Visibility'}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-mono uppercase tracking-widest transition-colors border flex items-center gap-2 ${section.inNavbar ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/30' : 'bg-white/5 text-white/20 border-white/5'}`}
+          >
+            <LayoutList className="w-3 h-3" />
+            {section.inNavbar ? 'Navbar' : '---'}
+          </button>
+          
+          <button 
+            onClick={() => setEditingLabel(section)}
+            title={lang === 'ar' ? 'تعديل مسمى القائمة' : 'Edit Navbar Label'}
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <Type className="w-3 h-3" />
+          </button>
+
           <button 
             onClick={() => toggleVisibility(section.id)}
-            className={`min-w-[70px] px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-colors border ${section.isVisible ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
+            className={`min-w-[70px] px-3 py-1.5 rounded-lg text-[9px] font-mono uppercase tracking-widest transition-colors border ${section.isVisible ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
           >
             {section.isVisible ? t[lang].status.visible : t[lang].status.hidden}
           </button>
@@ -90,10 +113,12 @@ const SortableSectionItem = ({
 // ------------------------------
 
 export const ContentSectionsManager = () => {
-  const { sections, toggleVisibility, moveSection, setSectionsOrder } = useAdmin();
+  const { sections, toggleVisibility, toggleNavbarVisibility, moveSection, setSectionsOrder } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [activeEditor, setActiveEditor] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<'testimonials' | 'logos' | 'social' | null>(null);
+  const [editingLabel, setEditingLabel] = useState<SectionBlueprint | null>(null);
+  const { updateSectionLabel } = useAdmin();
 
   const isRtl = lang === 'ar';
 
@@ -213,8 +238,10 @@ export const ContentSectionsManager = () => {
                     isRtl={isRtl}
                     moveSection={moveSection}
                     toggleVisibility={toggleVisibility}
+                    toggleNavbarVisibility={toggleNavbarVisibility}
                     activeEditor={activeEditor}
                     setActiveEditor={setActiveEditor}
+                    setEditingLabel={setEditingLabel}
                   />
                 ))}
               </SortableContext>
@@ -290,6 +317,70 @@ export const ContentSectionsManager = () => {
       {activeModal === 'testimonials' && <TestimonialsManager lang={lang} onClose={() => setActiveModal(null)} />}
       {activeModal === 'logos' && <ClientLogosManager lang={lang} onClose={() => setActiveModal(null)} />}
       {activeModal === 'social' && <SocialLinksManager lang={lang} onClose={() => setActiveModal(null)} />}
+      {/* Label Edit Modal */}
+      {editingLabel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Type className="w-5 h-5 text-accent-violet" />
+                {lang === 'ar' ? 'تعديل مسمى القائمة' : 'Edit Navbar Label'}
+              </h3>
+              <button onClick={() => setEditingLabel(null)} className="text-white/40 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1.5">
+                  English Label
+                </label>
+                <input 
+                  type="text"
+                  defaultValue={editingLabel.navLabel?.en || editingLabel.name}
+                  id="nav-label-en"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent-violet/50 focus:ring-1 focus:ring-accent-violet/50 outline-none transition-all"
+                  placeholder="e.g. Portfolio"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1.5">
+                  Arabic Label (العربية)
+                </label>
+                <input 
+                  type="text"
+                  dir="rtl"
+                  defaultValue={editingLabel.navLabel?.ar || editingLabel.name}
+                  id="nav-label-ar"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-right focus:border-accent-violet/50 focus:ring-1 focus:ring-accent-violet/50 outline-none transition-all"
+                  placeholder="مثال: أعمالي"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-8">
+              <button 
+                onClick={() => setEditingLabel(null)}
+                className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-all border border-white/10"
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button 
+                onClick={() => {
+                  const en = (document.getElementById('nav-label-en') as HTMLInputElement).value;
+                  const ar = (document.getElementById('nav-label-ar') as HTMLInputElement).value;
+                  updateSectionLabel(editingLabel.id, { en, ar });
+                  setEditingLabel(null);
+                }}
+                className="flex-1 px-4 py-3 rounded-xl bg-accent-violet text-white font-bold hover:bg-accent-violet/80 transition-all shadow-lg shadow-accent-violet/20"
+              >
+                {lang === 'ar' ? 'حفظ التغييرات' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
