@@ -168,12 +168,14 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
 
         if (isLocal && apiKey) {
           console.warn("[AURA] Local Dev Fallback: Using direct browser call to Gemini.");
-          const directResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          const directResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: `CONTEXT:\n${contextRaw}\n\nUSER_MESSAGE: ${userMessage}` }] }],
-              systemInstruction: { parts: [{ text: systemInstruction }] }
+              contents: [{ 
+                role: 'user', 
+                parts: [{ text: `SYSTEM_INSTRUCTION:\n${systemInstruction}\n\nCONTEXT:\n${contextRaw}\n\nUSER_MESSAGE:\n${userMessage}` }] 
+              }]
             })
           });
           const directData = await directResponse.json();

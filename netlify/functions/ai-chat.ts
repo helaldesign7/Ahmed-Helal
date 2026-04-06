@@ -16,17 +16,18 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ 
           role: 'user', 
-          parts: [{ text: `CONTEXT:\n${context}\n\nUSER_MESSAGE: ${message}` }] 
-        }],
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        }
+          parts: [{ 
+            text: `SYSTEM_INSTRUCTION:\n${systemInstruction}\n\nCONTEXT:\n${context}\n\nUSER_MESSAGE:\n${message}` 
+          }] 
+        }]
       })
     });
 
