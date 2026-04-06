@@ -24,7 +24,7 @@ export const handler: Handler = async (event) => {
           role: 'user', 
           parts: [{ text: `CONTEXT:\n${context}\n\nUSER_MESSAGE: ${message}` }] 
         }],
-        system_instruction: {
+        systemInstruction: {
           parts: [{ text: systemInstruction }]
         }
       })

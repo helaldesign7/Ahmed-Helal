@@ -173,7 +173,7 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ role: 'user', parts: [{ text: `CONTEXT:\n${contextRaw}\n\nUSER_MESSAGE: ${userMessage}` }] }],
-              system_instruction: { parts: [{ text: systemInstruction }] }
+              systemInstruction: { parts: [{ text: systemInstruction }] }
             })
           });
           const directData = await directResponse.json();
