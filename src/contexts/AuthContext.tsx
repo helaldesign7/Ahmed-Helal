@@ -47,13 +47,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || 'helal.design7@gmail.com';
 
     if (trimmedEmail === adminEmail && password === adminPass) {
-      if (sbError) {
-        console.warn("Supabase Auth Sync Error:", sbError.message);
-        // We still allow local login for UI experience, but RLS might block DB writes if Supabase auth failed
+      if (sbError || !sbData.user) {
+        console.error("Supabase Auth Security Failure:", sbError?.message || "User not found in Supabase Auth");
+        return false; // Block login if we can't secure the backend session
       }
       
       const adminUser: User = {
-        id: sbData.user?.id || 'admin-001',
+        id: sbData.user.id,
         email: adminEmail,
         role: 'super_admin',
         name: 'Ahmed Helal'

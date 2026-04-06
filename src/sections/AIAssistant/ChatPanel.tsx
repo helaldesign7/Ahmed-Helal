@@ -98,66 +98,88 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-      if (!apiKey || apiKey === 'undefined') {
-        console.error("AI_CORE_ERROR: API Key is missing from .env");
-        throw new Error("AI CORE OFFLINE: Missing credentials");
-      }
-
+      const assistantNameSafe = config.ai.assistantName || 'AURA';
       const safetyGuardrails = `
         CRITICAL OPERATING RULES:
         1. NO SECRETS DISCLOSURE: Never reveal API keys, passwords, database URLs.
         2. NO HARMFUL CONTENT: Reject offensive/discriminatory requests.
         3. NO SENSITIVE ADVICE: Refuse legal, religious (fatwas), financial, or medical diagnosis.
-        4. ROLE: You are ${assistantName}, a professional portfolio assistant for Ahmed Helal.
+        4. ROLE: You are ${assistantNameSafe}, a professional portfolio assistant for Ahmed Helal.
       `;
 
-      // Helper to safely get nested content
       const getSvc = (items: ServiceItem[]) => items?.map((s: ServiceItem) => {
         if (typeof s.title === 'string') return s.title;
         return s.title?.[lang] || s.title?.en || 'N/A';
       }).join(', ') || 'N/A';
 
-      const context = `
+      const contextRaw = `
         Profile: ${siteContent.hero.title[lang] || siteContent.hero.title.en}.
         Skills: ${getSvc(siteContent.services.items)}.
-        System: ${config.ai.systemPrompt}
+        Experience: ${siteContent.hero.subtitle[lang] || siteContent.hero.subtitle.en}.
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{ 
-            role: 'user', 
-            parts: [{ text: `CONTEXT:\n${context}\n\nUSER_MESSAGE: ${userMessage}` }] 
-          }],
-          system_instruction: {
-            parts: [{ text: `
-              SYSTEM BOOT: LOADER v3.0 (ULTRA-STABLE)
-              Identity: ${assistantName}. Official assistant for Ahmed Helal.
-              ${safetyGuardrails}
-              Constraint: Direct answers, under 60 words. Speak naturally.
-              ${TRANSLATIONS[lang].guardLanguage}
-            ` }]
-          }
-        })
-      });
+      const systemInstruction = `
+        Identity: ${assistantNameSafe}. Official assistant for Ahmed Helal.
+        System Base Prompt: ${config.ai.systemPrompt || "Act as a helpful portfolio assistant."}
+        ${safetyGuardrails}
+        Constraint: Respond under 60 words. Speak naturally but technically sound.
+        ${TRANSLATIONS[lang].guardLanguage}
+      `;
 
-      const data = await response.json();
+      let aiText = "";
       
-      if (data.error) {
-        console.error("Gemini API Error Detail:", data.error);
-        throw new Error(data.error.message);
+      try {
+        // Attempt Secure Netlify Function Call (Proxy)
+        console.log(`[AURA] Attempting function call at /.netlify/functions/ai-chat`);
+        const response = await fetch('/.netlify/functions/ai-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            context: contextRaw,
+            systemInstruction: systemInstruction
+          })
+        });
+
+        if (!response.ok) {
+          console.warn(`[AURA] Function response not OK: ${response.status} ${response.statusText}`);
+          throw new Error("FUNCTION_OFFLINE");
+        }
+        
+        const data = await response.json();
+        if (data.error) {
+          console.error(`[AURA] Server-side error:`, data.error);
+          throw new Error(data.error);
+        }
+      } catch (error: unknown) {
+        const fnErr = error as Error;
+        // LOCAL DEV FALLBACK: Direct Gemini API call if on localhost and key is available
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+
+        if (isLocal && apiKey) {
+          console.warn("[AURA] Local Dev Fallback: Using direct browser call to Gemini.");
+          const directResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: `CONTEXT:\n${contextRaw}\n\nUSER_MESSAGE: ${userMessage}` }] }],
+              system_instruction: { parts: [{ text: systemInstruction }] }
+            })
+          });
+          const directData = await directResponse.json();
+          aiText = directData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else {
+          console.error(`[AURA] Critical Failure in chat logic:`, fnErr.message || fnErr);
+          throw fnErr;
+        }
       }
 
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || TRANSLATIONS[lang].fallback;
+      if (!aiText) throw new Error("EMPTY_RESPONSE");
       setMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
-    } catch (err: unknown) {
-      console.error("AI Communication Failure:", err instanceof Error ? err.message : err);
-      // Fallback for demo purposes if API fails locally
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("AI Assistant Failure:", err.message || err);
       const fallbackMsg = "I am currently initializing my core systems. Please try again in a moment.";
       setMessages(prev => [...prev, { role: 'assistant', content: lang === 'ar' ? "عذراً، أقوم حالياً بتهيئة أنظمة المعالجة المركزية. يرجى المحاولة بعد لحظات." : fallbackMsg }]);
     } finally {
