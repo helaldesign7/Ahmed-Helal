@@ -179,9 +179,18 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
       setMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
     } catch (error: unknown) {
       const err = error as Error;
-      console.error("AI Assistant Failure:", err.message || err);
-      const fallbackMsg = "I am currently initializing my core systems. Please try again in a moment.";
-      setMessages(prev => [...prev, { role: 'assistant', content: lang === 'ar' ? "عذراً، أقوم حالياً بتهيئة أنظمة المعالجة المركزية. يرجى المحاولة بعد لحظات." : fallbackMsg }]);
+      console.error("[AURA] Assistant Failure:", err.message || err);
+      
+      // DIAGNOSTIC UPDATE: Show the actual error to the user for debugging
+      const technicalError = err.message || "Unknown Connection Error";
+      const fallbackMsg = `[SYSTEM_DIAGNOSTIC]: ${technicalError}. Please check your Netlify Environment Variables.`;
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: lang === 'ar' 
+          ? `[خطأ تشخيصي]: ${technicalError}. يرجى التأكد من إعدادات Netlify.` 
+          : fallbackMsg 
+      }]);
     } finally {
       setLoading(false);
     }

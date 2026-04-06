@@ -33,18 +33,26 @@ export const handler: Handler = async (event) => {
     const data = await response.json();
     
     if (data.error) {
+      console.error('GENIMIAL_API_ERROR:', data.error);
       return { 
-        statusCode: data.error.code || 500, 
-        body: JSON.stringify({ error: data.error.message }) 
+        statusCode: 502, 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: `GEMINI_ERROR: ${data.error.message || 'Unknown API Error'}` }) 
+      };
+    }
+
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!aiText) {
+      return { 
+        statusCode: 500, 
+        body: JSON.stringify({ error: 'AI_EMPTY_RESPONSE: The model returned no content.' }) 
       };
     }
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        text: data.candidates?.[0]?.content?.parts?.[0]?.text || '' 
-      }),
+      body: JSON.stringify({ text: aiText }),
     };
   } catch (error: unknown) {
     const err = error as Error;
