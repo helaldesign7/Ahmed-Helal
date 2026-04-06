@@ -13,7 +13,7 @@ interface StartProjectProps {
 }
 
 export const StartProject = ({ lang }: StartProjectProps) => {
-  const { siteContent, setLeads } = useAdmin();
+  const { siteContent, addLead } = useAdmin();
   const content = siteContent.startProject;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -38,36 +38,11 @@ export const StartProject = ({ lang }: StartProjectProps) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
-      ...formData,
-      timestamp: new Date().toISOString()
-    };
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     try {
-      const response = await fetch('/.netlify/functions/submit-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      // Local Development Simulation Handler
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-      if (!response.ok && isLocal) {
-        console.warn("DEV_MODE: Netlify function not found locally. Simulating success for verification.");
-        // Proceed to success logic below
-      } else if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        let errorMsg = `Server error (${response.status})`;
-        if (contentType && contentType.includes("application/json")) {
-           const errData = await response.json();
-           errorMsg = errData.error || errorMsg;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const newLead = {
-        id: Date.now(),
+      // 1. Save to Cloud (Supabase) via AdminContext
+      const newLeadData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
         whatsapp: formData.whatsapp.trim(),
@@ -84,34 +59,34 @@ export const StartProject = ({ lang }: StartProjectProps) => {
           workType: formData.workType
         },
         status: 'new' as const,
-        date: new Date().toLocaleString(),
-        source: isLocal ? 'Form (Local Simulation)' : 'Form (Transmission Complete)'
+        date: new Date().toISOString(),
+        source: isLocal ? 'Form (Local Sync)' : 'Form (Cloud Sync)'
       };
 
-      setLeads(prev => [newLead, ...prev]);
+      await addLead(newLeadData);
 
-      const savedLeads = JSON.parse(localStorage.getItem('portfolio_leads') || '[]');
-      localStorage.setItem('portfolio_leads', JSON.stringify([newLead, ...savedLeads]));
-      
+      // 2. Trigger Email Notification (Netlify Function)
+      await fetch('/.netlify/functions/submit-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
+      });
+
       setIsSubmitting(false);
       setIsSuccess(true);
       
-      // Smoothly center the success message in the viewport instead of jumping to section top
       setTimeout(() => {
         sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     } catch (error: unknown) {
-      const err = error as Error;
       setIsSubmitting(false);
-      
-      // Secondary fallback for local if even catch block is hit
-      if (window.location.hostname === 'localhost') {
-        console.warn("DEV_FALLBACK: Capturing local submission despite error:", err.message);
+      if (isLocal) {
+        console.warn("DEV_FALLBACK: Capturing local submission despite error");
         setIsSuccess(true);
         return;
       }
-
-      alert(`TRANSMISSION FAILED: ${err.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown sync error';
+      alert(`TRANSMISSION ERROR: ${errorMsg}`);
     }
   };
 

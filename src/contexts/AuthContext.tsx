@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
@@ -9,7 +10,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => { success: boolean; error?: string };
   logout: () => void;
 }
@@ -31,16 +32,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const login = (email: string, password: string) => {
+  const login = async (email: string, password: string) => {
     const trimmedEmail = email.trim().toLowerCase();
     
-    // 1. Check Admin Credentials
+    // 1. Sync with Supabase Auth for RLS / Backend Security
+    // This provides the JWT needed for the backend to recognize the user as authenticated
+    const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password: password
+    });
+
+    // 2. Check Admin Credentials (Local Fallback + UI Identity)
     const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || 'helal.design7@gmail.com').toLowerCase();
     const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || 'helal.design7@gmail.com';
 
     if (trimmedEmail === adminEmail && password === adminPass) {
+      if (sbError) {
+        console.warn("Supabase Auth Sync Error:", sbError.message);
+        // We still allow local login for UI experience, but RLS might block DB writes if Supabase auth failed
+      }
+      
       const adminUser: User = {
-        id: 'admin-001',
+        id: sbData.user?.id || 'admin-001',
         email: adminEmail,
         role: 'super_admin',
         name: 'Ahmed Helal'
@@ -50,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true;
     }
 
-    // 2. Check Local Users (Persistent Mock Database)
+    // 3. Check Local Users (Persistent Mock Database)
     const storedUsers: StoredUser[] = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
     const matchedUser = storedUsers.find((u) => u.email.toLowerCase() === trimmedEmail && u.password === password);
 

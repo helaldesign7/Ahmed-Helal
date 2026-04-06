@@ -6,7 +6,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { Project } from '../../types/admin';
 
 export const ProjectsManager = () => {
-  const { projects, setProjects } = useAdmin();
+  const { projects, updateProject, deleteProject } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'published' | 'archived'>('all');
@@ -99,15 +99,13 @@ export const ProjectsManager = () => {
     setIsEditorOpen(true);
   };
 
-  const handleArchive = (id: number) => {
-    setProjects(prev => prev.map(p => 
-      p.id === id ? { ...p, status: p.status === 'published' ? 'archived' : 'published' } : p
-    ));
+  const handleArchive = async (id: number, currentStatus: 'published' | 'archived') => {
+    await updateProject(id, { status: currentStatus === 'published' ? 'archived' : 'published' });
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm(t[lang].deleteConfirm)) {
-      setProjects(prev => prev.filter(p => p.id !== id));
+      await deleteProject(id);
     }
   };
 
@@ -216,7 +214,7 @@ export const ProjectsManager = () => {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleArchive(project.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleArchive(project.id, project.status); }}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-accent-violet" 
                         title={project.status === 'published' ? t[lang].tooltips.archive : t[lang].tooltips.publish}
                       >

@@ -80,13 +80,13 @@ export const LoginModal = ({ isOpen, onClose, lang }: LoginModalProps) => {
         return;
       }
 
-      const success = login(email, password);
+      const success = await login(email, password);
       if (success) {
         onClose();
       } else {
         setError(t[lang].invalid);
       }
-    } catch {
+    } catch (err) {
       setError(t[lang].unavailable);
     } finally {
       setIsLoading(false);

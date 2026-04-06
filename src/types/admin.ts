@@ -139,6 +139,10 @@ export interface AdminContextType {
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
+  addProject: (project: Omit<Project, 'id'>) => Promise<void>;
+  updateProject: (id: number, updates: Partial<Project>) => Promise<void>;
+  deleteProject: (id: number) => Promise<void>;
+  addLead: (lead: Omit<Lead, 'id'>) => Promise<void>;
   appearance: Appearance;
   setAppearance: React.Dispatch<React.SetStateAction<Appearance>>;
   config: AdminConfig;

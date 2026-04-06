@@ -12,7 +12,7 @@ interface ProjectEditorModalProps {
 }
 
 export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEditorModalProps) => {
-  const { projects, setProjects } = useAdmin();
+  const { addProject, updateProject } = useAdmin();
   const isEditing = !!project;
   const isRtl = lang === 'ar';
 
@@ -85,28 +85,26 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
   const set = (key: keyof typeof formData, val: unknown) =>
     setFormData(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.category) {
       alert(t[lang].validation);
       return;
     }
 
     if (isEditing && project) {
-      setProjects(prev => prev.map(p => p.id === project.id ? { ...p, ...formData } : p));
+      await updateProject(project.id, formData);
     } else {
-      const newProject: Project = {
+      const newProjectData = {
         ...formData,
-        id: Math.max(0, ...projects.map(p => p.id)) + 1,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       };
-      setProjects(prev => [newProject, ...prev]);
+      await addProject(newProjectData);
     }
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -115,14 +113,12 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
       />
 
-      {/* Modal */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 30 }}
         className={`relative w-full max-w-4xl max-h-[92vh] bg-primary-black border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden ${isRtl ? 'text-right' : ''}`}
       >
-        {/* Header */}
         <div className={`flex items-center justify-between p-8 border-b border-white/5 bg-linear-to-b from-white/2 to-transparent shrink-0 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight text-white">
@@ -140,10 +136,7 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-10">
-
-          {/* --- Title --- */}
           <div className="space-y-4">
             <div className={`flex items-center gap-2 pb-2 border-b border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <Type className="w-4 h-4 text-accent-violet" />
@@ -178,7 +171,6 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
             </div>
           </div>
 
-          {/* --- Category --- */}
           <div className="space-y-4">
             <div className={`flex items-center gap-2 pb-2 border-b border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <Layout className="w-4 h-4 text-accent-violet" />
@@ -213,7 +205,6 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
             </div>
           </div>
 
-          {/* --- Media --- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <div className="space-y-4">
               <div className={`flex items-center gap-2 pb-2 border-b border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -240,7 +231,6 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
             </div>
           </div>
 
-          {/* --- Content --- */}
           <div className="space-y-4">
             <div className={`flex items-center gap-2 pb-2 border-b border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <FileText className="w-4 h-4 text-accent-violet" />
@@ -255,7 +245,6 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             {/* Order */}
              <div className="space-y-3">
                 <div className={`flex items-center gap-2 pb-2 border-b border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
                   <Hash className="w-3.5 h-3.5 text-accent-violet" />
@@ -271,7 +260,6 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
                 <p className="text-[8px] font-mono text-white/20 uppercase leading-relaxed tracking-wider">{t[lang].orderSub}</p>
              </div>
 
-             {/* Toggles */}
              <div
               onClick={() => set('status', formData.status === 'published' ? 'archived' : 'published')}
               className={`p-6 rounded-3xl border cursor-pointer transition-all flex flex-col justify-between ${
@@ -306,10 +294,8 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
               <p className="text-[10px] font-mono text-white/40 mt-4 leading-relaxed uppercase">{t[lang].featuredSub}</p>
             </div>
           </div>
-
         </div>
 
-        {/* Footer */}
         <div className={`p-8 border-t border-white/5 bg-primary-black shrink-0 flex items-center justify-end gap-6 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <button
             onClick={onClose}
@@ -331,4 +317,5 @@ export const ProjectEditorModal = ({ onClose, project, lang = 'en' }: ProjectEdi
     </div>
   );
 };
+
 import { Image as ImageIcon } from 'lucide-react';
