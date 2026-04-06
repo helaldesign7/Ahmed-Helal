@@ -42,25 +42,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password: password
     });
 
-    // 2. Check Admin Credentials (Local Fallback + UI Identity)
-    const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || 'helal.design7@gmail.com').toLowerCase();
-    const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || 'helal.design7@gmail.com';
-
-    if (trimmedEmail === adminEmail && password === adminPass) {
-      if (sbError || !sbData.user) {
-        console.error("Supabase Auth Security Failure:", sbError?.message || "User not found in Supabase Auth");
-        return false; // Block login if we can't secure the backend session
-      }
-      
+    // 2. Check Admin Credentials (Verify via Supabase User Email)
+    const adminEmail = 'helal.design7@gmail.com';
+    
+    if (sbData.user && sbData.user.email?.toLowerCase() === adminEmail) {
       const adminUser: User = {
         id: sbData.user.id,
         email: adminEmail,
         role: 'super_admin',
-        name: 'Ahmed Helal'
+        name: sbData.user.user_metadata?.full_name || 'Ahmed Helal'
       };
       setUser(adminUser);
       localStorage.setItem('portfolio_session', JSON.stringify(adminUser));
       return true;
+    }
+
+    if (sbError || !sbData.user) {
+      console.error("Authentication Failure:", sbError?.message || "Invalid credentials");
+      return false;
     }
 
     // 3. Check Local Users (Persistent Mock Database)
