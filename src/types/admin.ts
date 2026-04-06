@@ -30,9 +30,77 @@ export interface Lead {
     hasIdentity: string;
     workType: string;
   };
-  status: 'new' | 'contacted' | 'in_progress' | 'completed' | 'lost';
+  status: 'pending' | 'in_progress' | 'completed' | 'not_completed';
   date: string;
   source: string;
+}
+
+export interface CRMClient {
+  id: number;
+  name: string;
+  brand_company: string;
+  email: string;
+  phone_whatsapp: string;
+  source: string;
+  notes: string;
+  preferred_contact: 'email' | 'whatsapp' | 'both';
+  last_interaction_date: string;
+  status: 'active' | 'inactive' | 'lead';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CRMProject {
+  id: number;
+  client_id: number;
+  project_name: string;
+  description: string;
+  requirements: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
+  notes: string;
+  due_date: string;
+  budget: string;
+  paid_amount: string;
+  remaining_amount: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  tags: string[];
+  archived: boolean;
+  display_order?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  project_id: number;
+  title: string;
+  status: 'todo' | 'in_progress' | 'done';
+  due_date?: string;
+  created_at: string;
+}
+
+export interface ProjectNote {
+  id: string;
+  project_id: number;
+  content: string;
+  created_at: string;
+}
+
+export interface ProjectLink {
+  id: string;
+  project_id: number;
+  label: string;
+  url: string;
+  category?: string;
+  created_at: string;
+}
+
+export interface ProjectActivity {
+  id: string;
+  project_id: number;
+  action: string;
+  details: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface Appearance {
@@ -105,15 +173,20 @@ export interface Notification {
 }
 
 export interface MediaAsset {
-  id: string;
-  title: string;
+  id: string; // UUID from DB
+  filename: string;
+  storage_path: string;
+  full_url: string;
   type: 'image' | 'video' | 'document';
-  source: 'drive' | 'external' | 'upload';
-  size: string;
-  date: string;
-  url: string;
-  category?: string;
+  mime_type: string;
+  size_bytes: number;
+  source: 'upload' | 'external' | 'drive';
+  category: string;
   tags?: string[];
+  alt_text?: string;
+  title?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface SystemStats {
@@ -123,14 +196,48 @@ export interface SystemStats {
   load: number;
 }
 
+export interface ActivityLog {
+  id: number;
+  admin_id?: string;
+  action: string;
+  target_type: string;
+  target_id?: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  guest_session_id: string;
+  last_message_at: string;
+  status: 'active' | 'archived';
+  metadata?: {
+    hasLead?: boolean;
+    [key: string]: unknown;
+  };
+  created_at: string;
+  messages?: ChatMessage[];
+}
+
+export interface ChatMessage {
+  id: number;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 export interface AdminConfig {
   ai: {
     assistantName: string;
-    welcomeMessage: string;
+    welcomeMessageEn: string;
+    welcomeMessageAr: string;
     tone: string;
     systemPrompt: string;
+    knowledgeBase: string;
     autoSuggest: boolean;
     leadCaptureEnforcement: boolean;
+    lastUpdatedAt: string;
   };
 }
 
@@ -143,6 +250,22 @@ export interface AdminContextType {
   updateProject: (id: number, updates: Partial<Project>) => Promise<void>;
   deleteProject: (id: number) => Promise<void>;
   addLead: (lead: Omit<Lead, 'id'>) => Promise<void>;
+  updateLead: (id: number, updates: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: number) => Promise<void>;
+  
+  crmClients: CRMClient[];
+  setCrmClients: React.Dispatch<React.SetStateAction<CRMClient[]>>;
+  addCrmClient: (client: Omit<CRMClient, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateCrmClient: (id: number, updates: Partial<CRMClient>) => Promise<void>;
+  deleteCrmClient: (id: number) => Promise<void>;
+
+  crmProjects: CRMProject[];
+  setCrmProjects: React.Dispatch<React.SetStateAction<CRMProject[]>>;
+  addCrmProject: (project: Omit<CRMProject, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateCrmProject: (id: number, updates: Partial<CRMProject>) => Promise<void>;
+  deleteCrmProject: (id: number) => Promise<void>;
+  reorderCrmProjects: (projectId: number, newIndex: number) => Promise<void>;
+
   appearance: Appearance;
   setAppearance: React.Dispatch<React.SetStateAction<Appearance>>;
   config: AdminConfig;
@@ -154,15 +277,45 @@ export interface AdminContextType {
   sections: SectionBlueprint[];
   notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  loading: boolean;
   mediaAssets: MediaAsset[];
   setMediaAssets: React.Dispatch<React.SetStateAction<MediaAsset[]>>;
+  uploadMedia: (file: File, metadata?: { category?: string; alt_text?: string; title?: string }) => Promise<MediaAsset>;
+  deleteMedia: (assetId: string) => Promise<void>;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
   toggleVisibility: (id: SectionId) => void;
   moveSection: (id: SectionId, direction: 'up' | 'down') => void;
+  reorderSections: (startIndex: number, endIndex: number) => void;
+  setSectionsOrder: (newSections: SectionBlueprint[]) => void;
+  reorderProjects: (projectId: number, newIndex: number) => Promise<void>;
   
   stats: SystemStats;
   updateStats: (newStats: Partial<SystemStats>) => void;
+
+  activityLogs: ActivityLog[];
+  logActivity: (action: string, targetType: string, targetId?: string, details?: Record<string, unknown>) => Promise<void>;
+
+  conversations: ChatConversation[];
+  fetchConversations: () => Promise<void>;
+  fetchMessages: (conversationId: string) => Promise<ChatMessage[]>;
+  updateAiConfig: (updates: Partial<AdminConfig['ai']>) => Promise<void>;
+
+  // Project Workspace Sub-resources
+  fetchProjectData: (projectId: number) => Promise<{
+    tasks: ProjectTask[];
+    notes: ProjectNote[];
+    links: ProjectLink[];
+    activities: ProjectActivity[];
+  }>;
+  addTask: (task: Omit<ProjectTask, 'id' | 'created_at'>) => Promise<void>;
+  updateTask: (id: string, updates: Partial<ProjectTask>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  addNote: (note: Omit<ProjectNote, 'id' | 'created_at'>) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
+  addLink: (link: Omit<ProjectLink, 'id' | 'created_at'>) => Promise<void>;
+  deleteLink: (id: string) => Promise<void>;
+  logProjectActivity: (projectId: number, action: string, details?: Record<string, unknown>) => Promise<void>;
 }
 
 export const defaultBlueprint: SectionBlueprint[] = [

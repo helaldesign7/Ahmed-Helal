@@ -4,7 +4,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { Lead, Project } from '../../types/admin';
 
 export const DashboardOverview = () => {
-  const { projects, leads, stats } = useAdmin();
+  const { projects, leads, stats, activityLogs } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
 
   const isRtl = lang === 'ar';
@@ -28,7 +28,9 @@ export const DashboardOverview = () => {
       date: 'Date',
       clear: 'All systems clear',
       newStatus: 'new',
-      progressStatus: 'in progress'
+      progressStatus: 'in progress',
+      activity: 'Recent System Activity',
+      noActivity: 'No recent activity recorded'
     },
     ar: {
       title: 'مركز التحكم',
@@ -48,12 +50,14 @@ export const DashboardOverview = () => {
       date: 'التاريخ',
       clear: 'كل الأنظمة تعمل بكفاءة',
       newStatus: 'جديد',
-      progressStatus: 'قيد العمل'
+      progressStatus: 'قيد العمل',
+      activity: 'أحدث نشاط للنظام',
+      noActivity: 'لم يتم تسجيل أي نشاط مؤخراً'
     }
   };
 
   const statCards = [
-    { label: t[lang].requests, value: leads.length.toString(), icon: MessagesSquare, trend: `+${leads.filter((l: Lead) => l.status === 'new').length} ${t[lang].new}` },
+    { label: t[lang].requests, value: leads.length.toString(), icon: MessagesSquare, trend: `+${leads.filter((l: Lead) => l.status === 'pending').length} ${t[lang].new}` },
     { label: t[lang].active, value: leads.filter((l: Lead) => l.status === 'in_progress').length.toString(), icon: Users, trend: t[lang].progress },
     { label: t[lang].traffic, value: stats.visits.toLocaleString(), icon: Eye, trend: `${stats.activeUsers} ${t[lang].live}` },
     { label: t[lang].caseStudies, value: projects.filter((p: Project) => p.status === 'published').length.toString(), icon: FolderGit2, trend: `+${projects.filter((p: Project) => p.isFeatured).length} ${t[lang].featured}` },
@@ -108,11 +112,11 @@ export const DashboardOverview = () => {
                   <td className="px-4 py-4 text-xs">{lead.interest}</td>
                   <td className="px-4 py-4">
                     <span className={`px-2 py-1 border rounded text-[10px] font-mono uppercase tracking-wider ${
-                      lead.status === 'new' ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/30' :
+                      lead.status === 'pending' ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/30' :
                       lead.status === 'in_progress' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                       'bg-white/5 text-white/40 border-white/10'
                     }`}>
-                      {lead.status === 'new' ? t[lang].newStatus : 
+                      {lead.status === 'pending' ? t[lang].newStatus : 
                        lead.status === 'in_progress' ? t[lang].progressStatus : 
                        lead.status.replace('_', ' ')}
                     </span>
@@ -123,7 +127,35 @@ export const DashboardOverview = () => {
             </tbody>
           </table>
         </div>
+        <div className="bg-primary-black border border-white/5 rounded-2xl p-6">
+        <h2 className="text-sm font-black uppercase tracking-widest text-white mb-6 px-4">{t[lang].activity}</h2>
+        <div className="space-y-3 px-4 font-mono">
+          {activityLogs.length === 0 ? (
+            <p className="text-white/20 text-[10px] uppercase tracking-widest py-4">{t[lang].noActivity}</p>
+          ) : (
+            activityLogs.slice(0, 8).map((log) => (
+              <div key={log.id} className="flex flex-wrap gap-2 text-[10px] border-b border-white/5 pb-2 last:border-0">
+                <span className="text-white/20 whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
+                  log.action === 'create' ? 'bg-green-500/10 text-green-400' :
+                  log.action === 'update' ? 'bg-blue-500/10 text-blue-400' :
+                  log.action === 'delete' ? 'bg-red-500/10 text-red-400' :
+                  'bg-accent-violet/10 text-accent-violet'
+                }`}>{log.action}</span>
+                <span className="text-white/40 uppercase tracking-tighter">{log.target_type}</span>
+                <span className="text-white/80 font-bold truncate max-w-[100px]">{log.target_id || '-'}</span>
+                {log.details && Object.keys(log.details).length > 0 && (
+                  <span className="text-white/20 truncate max-w-[200px] italic">
+                    {Object.entries(log.details).map(([k, v]) => `${k}: ${typeof v === 'object' ? '...' : v}`).join(', ')}
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
+
+    </div>
 
     </div>
   );

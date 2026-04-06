@@ -1,6 +1,7 @@
 import { useAdmin } from '../../contexts/useAdmin';
 import { useOutletContext } from 'react-router-dom';
 import type { Content } from '../../data/content';
+import { MediaPickerField } from './media/MediaPickerField';
 
 interface DictionaryNodeProps {
   nodeKey: string;
@@ -10,6 +11,23 @@ interface DictionaryNodeProps {
   sectionKey: keyof Content;
   lang: 'en' | 'ar';
 }
+
+const isMediaField = (key: string, path: string) => {
+  const mediaKeys = [
+    'image', 'avatar', 'logo', 'thumbnail', 'background', 
+    'graphic', 'icon', 'cover', 'banner', 'photo', 'url'
+  ];
+  const lowerKey = key.toLowerCase();
+  const lowerPath = path.toLowerCase();
+  
+  // If it's explicitly one of the media keys
+  if (mediaKeys.some(m => lowerKey.includes(m))) return true;
+  
+  // If the path contains media-related terms (e.g., hero.background.url)
+  if (lowerPath.includes('background') || lowerPath.includes('media') || lowerPath.includes('image')) return true;
+
+  return false;
+};
 
 const DictionaryNode = ({ nodeKey, data, path, sectionKey, lang }: DictionaryNodeProps) => {
   const { updateText } = useAdmin();
@@ -83,6 +101,17 @@ const DictionaryNode = ({ nodeKey, data, path, sectionKey, lang }: DictionaryNod
   }
 
   if (typeof data === 'string' || typeof data === 'number') {
+    if (typeof data === 'string' && isMediaField(nodeKey, path)) {
+      return (
+        <MediaPickerField 
+          label={nodeKey.replace(/([A-Z])/g, ' $1').trim()}
+          value={data}
+          onChange={(url) => updateText(sectionKey, path, 'raw', url)}
+          lang={lang}
+        />
+      );
+    }
+
     return (
       <div className={`mb-5 bg-white/2 p-5 rounded-2xl border border-white/5 ${isRtl ? 'text-right' : ''}`}>
         <label className="block text-[10px] font-mono text-white/40 uppercase tracking-[0.2em] mb-3">

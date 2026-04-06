@@ -7,7 +7,8 @@ import {
   Bot, 
   Database,
   Settings,
-  LogOut
+  LogOut,
+  HardDrive
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -34,6 +35,7 @@ export const Sidebar = ({ lang }: SidebarProps) => {
         blueprint: 'Blueprint & Content',
         crm: 'CRM & Leads',
         ai: 'AI Assistant',
+        media: 'Media Assets',
         system: 'System'
       }
     },
@@ -47,6 +49,7 @@ export const Sidebar = ({ lang }: SidebarProps) => {
         blueprint: 'الهيكلية والمحتوى',
         crm: 'العملاء والطلبات',
         ai: 'مساعد الذكاء الاصطناعي',
+        media: 'مكتبة الوسائط',
         system: 'إعدادات النظام'
       }
     }
@@ -59,6 +62,7 @@ export const Sidebar = ({ lang }: SidebarProps) => {
     { name: t[lang].nav.blueprint, path: '/admin/content', icon: Database },
     { name: t[lang].nav.crm, path: '/admin/crm', icon: MessagesSquare },
     { name: t[lang].nav.ai, path: '/admin/ai', icon: Bot },
+    { name: t[lang].nav.media, path: '/admin/media', icon: HardDrive },
     { name: t[lang].nav.system, path: '/admin/settings', icon: Settings },
   ];
 

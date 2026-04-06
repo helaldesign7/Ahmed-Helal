@@ -1,16 +1,16 @@
 import { Search, MoreVertical, CheckCircle, Eye, Trash2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { CrmUsersTab } from '../components/crm/CrmUsersTab';
-import { CrmTicketsTab } from '../components/crm/CrmTicketsTab';
+import { CrmClientsTab } from '../components/crm/CrmClientsTab';
+import { CrmProjectsTab } from '../components/crm/CrmProjectsTab';
 import { LeadDetailsModal } from '../components/crm/LeadDetailsModal';
 import { useAdmin } from '../../contexts/useAdmin';
 import { useOutletContext } from 'react-router-dom';
 import type { Lead } from '../../types/admin';
 
 export const CRMLeads = () => {
-  const { leads, setLeads } = useAdmin();
+  const { leads, updateLead, deleteLead } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
-  const [activeTab, setActiveTab] = useState<'leads' | 'users' | 'tickets'>('leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'clients' | 'projects'>('leads');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -23,17 +23,16 @@ export const CRMLeads = () => {
       subtitle: 'Project Requests & Sales Pipeline',
       tabs: {
         leads: 'Leads',
-        users: 'Users',
-        tickets: 'Tickets'
+        clients: 'Clients',
+        projects: 'Projects'
       },
       searchPlaceholder: 'Search names, companies, or IDs...',
       statuses: {
         all: 'All Statuses',
-        new: 'New Request',
-        contacted: 'Contacted',
+        pending: 'Pending',
         in_progress: 'In Progress',
-        completed: 'Won / Closed',
-        lost: 'Lost'
+        completed: 'Completed',
+        not_completed: 'Not Completed'
       },
       table: {
         info: 'Lead Info',
@@ -57,17 +56,16 @@ export const CRMLeads = () => {
       subtitle: 'طلبات المشاريع ومراحل التنفيذ',
       tabs: {
         leads: 'الطلبات',
-        users: 'المستخدمين',
-        tickets: 'التذاكر'
+        clients: 'العملاء',
+        projects: 'المشاريع'
       },
       searchPlaceholder: 'ابحث بالاسم، الشركة أو المعرف...',
       statuses: {
         all: 'كل الحالات',
-        new: 'طلب جديد',
-        contacted: 'تم التواصل',
+        pending: 'قيد الانتظار',
         in_progress: 'قيد التنفيذ',
-        completed: 'تم الربح / الإغلاق',
-        lost: 'خسارة المشروع'
+        completed: 'مكتمل',
+        not_completed: 'غير مكتمل'
       },
       table: {
         info: 'بيانات العميل',
@@ -103,15 +101,13 @@ export const CRMLeads = () => {
       .sort((a: Lead, b: Lead) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [leads, searchQuery, statusFilter]);
 
-  const updateLeadStatus = (id: number, status: Lead['status']) => {
-    setLeads(prev => prev.map(lead => 
-      lead.id === id ? { ...lead, status } : lead
-    ));
+  const handleUpdateLeadStatus = async (id: number, status: Lead['status']) => {
+    await updateLead(id, { status });
   };
 
-  const deleteLead = (id: number) => {
+  const handleDeleteLead = async (id: number) => {
     if (confirm(t[lang].deleteConfirm)) {
-      setLeads(prev => prev.filter(lead => lead.id !== id));
+      await deleteLead(id);
     }
   };
 
@@ -125,7 +121,7 @@ export const CRMLeads = () => {
         
         {/* Navigation Tabs */}
         <div className={`flex bg-[#0c0c0c] p-1 rounded-xl border border-white/5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-           {(['leads', 'users', 'tickets'] as const).map((tab) => (
+           {(['leads', 'clients', 'projects'] as const).map((tab) => (
              <button 
                key={tab}
                onClick={() => setActiveTab(tab)}
@@ -182,8 +178,9 @@ export const CRMLeads = () => {
                   <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                     <td className={`px-6 py-5 ${isRtl ? 'text-right' : ''}`}>
                       <div className="font-bold text-white text-sm tracking-wide">{lead.name}</div>
+                      <div className="text-[11px] text-white/60 font-mono mt-0.5">{lead.email}</div>
                       {lead.projectTitle && (
-                        <div className="text-[10px] text-white/40 mt-0.5 truncate max-w-[200px] italic">
+                        <div className="text-[10px] text-white/40 mt-1 truncate max-w-[200px] italic">
                           "{lead.projectTitle}"
                         </div>
                       )}
@@ -193,22 +190,24 @@ export const CRMLeads = () => {
                       </div>
                     </td>
                     <td className={`px-6 py-4 ${isRtl ? 'text-right' : ''}`}>
-                      <div className="text-xs font-mono opacity-80">{lead.interest}</div>
+                      <div className="text-xs font-mono font-bold text-white opacity-90">{lead.serviceType || lead.interest}</div>
+                      <div className="text-[10px] text-white/50 truncate max-w-[150px] mt-1 hidden sm:block">
+                        {lead.description || 'No description provided...'}
+                      </div>
                       {lead.budget && (
-                        <div className="text-[10px] text-accent-violet font-bold mt-0.5">{lead.budget}</div>
+                        <div className="text-[10px] text-accent-violet font-bold mt-1">{lead.budget}</div>
                       )}
                     </td>
                     <td className={`px-6 py-4 ${isRtl ? 'text-right' : ''} relative`}>
                       <select 
                         value={lead.status}
-                        onChange={(e) => updateLeadStatus(lead.id, e.target.value as Lead['status'])}
+                        onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as Lead['status'])}
                         className={`bg-black/50 border border-white/10 rounded-md px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-white focus:outline-none focus:border-accent-violet appearance-none cursor-pointer ${isRtl ? 'pl-8 pr-3' : 'pr-8 pl-3'}`}
                       >
-                        <option value="new">🆕 {t[lang].statuses.new}</option>
-                        <option value="contacted">⏳ {t[lang].statuses.contacted}</option>
+                        <option value="pending">⏳ {t[lang].statuses.pending}</option>
                         <option value="in_progress">⚡ {t[lang].statuses.in_progress}</option>
                         <option value="completed">✅ {t[lang].statuses.completed}</option>
-                        <option value="lost">❌ {t[lang].statuses.lost}</option>
+                        <option value="not_completed">❌ {t[lang].statuses.not_completed}</option>
                       </select>
                     </td>
                     <td className={`px-6 py-4 text-xs font-mono ${isRtl ? 'text-right' : ''}`}>{lead.date}</td>
@@ -222,14 +221,14 @@ export const CRMLeads = () => {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => updateLeadStatus(lead.id, 'completed')}
+                          onClick={() => handleUpdateLeadStatus(lead.id, 'completed')}
                           className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-green-400" 
                           title={t[lang].tooltips.won}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => deleteLead(lead.id)}
+                          onClick={() => handleDeleteLead(lead.id)}
                           className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-500" 
                           title={t[lang].tooltips.delete}
                         >
@@ -255,15 +254,15 @@ export const CRMLeads = () => {
         </div>
       )}
 
-      {activeTab === 'users' && (
+      {activeTab === 'clients' && (
         <div className="animate-in fade-in slide-in-from-bottom-2">
-          <CrmUsersTab />
+          <CrmClientsTab />
         </div>
       )}
 
-      {activeTab === 'tickets' && (
+      {activeTab === 'projects' && (
         <div className="animate-in fade-in slide-in-from-bottom-2">
-          <CrmTicketsTab />
+          <CrmProjectsTab />
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { Search, Plus, Link, XCircle, Image as ImageIcon, FileVideo, HardDrive, FileText, Check } from 'lucide-react';
+import { Search, Link, XCircle, Image as ImageIcon, FileVideo, HardDrive, FileText, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../../../contexts/useAdmin';
 import { useState } from 'react';
@@ -15,15 +15,16 @@ export const MediaManagerModal = ({
   mode?: 'manage' | 'pick';
   lang?: 'en' | 'ar';
 }) => {
-  const { mediaAssets, setMediaAssets } = useAdmin();
+  const { mediaAssets, uploadMedia, deleteMedia } = useAdmin();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [activeType, setActiveType] = useState<'all' | 'image' | 'video' | 'document'>('all');
   const [isRegistering, setIsRegistering] = useState(false);
   const [newAssetData, setNewAssetData] = useState({
     title: '',
-    url: '',
     category: 'General',
-    type: 'image' as const
+    alt_text: ''
   });
 
   const isRtl = lang === 'ar';
@@ -57,7 +58,10 @@ export const MediaManagerModal = ({
         delete: 'Delete Registry'
       },
       empty: 'No matching assets found',
-      confirmDelete: 'Remove asset from registry?'
+      confirmDelete: 'Remove asset from registry?',
+      uploading: 'Uploading to Cloud...',
+      drop: 'Drop file to upload',
+      browse: 'Click to browse'
     },
     ar: {
       title: 'مكتبة الوسائط',
@@ -87,43 +91,49 @@ export const MediaManagerModal = ({
         delete: 'حذف السجل'
       },
       empty: 'لم يتم العثور على أصول مطابقة',
-      confirmDelete: 'هل تريد إزالة هذا الأصل من السجل؟'
+      confirmDelete: 'هل تريد إزالة هذا الأصل من السجل؟',
+      uploading: 'جاري الرفع للسحاب...',
+      drop: 'أفلت الملف للرفع',
+      browse: 'اضغط لاختيار ملف'
     }
   };
 
   const filteredAssets = mediaAssets.filter(a => {
-    const matchesSearch = a.title.toLowerCase().includes(search.toLowerCase()) || 
-                          a.id.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = a.filename?.toLowerCase().includes(search.toLowerCase()) || 
+                          a.title?.toLowerCase().includes(search.toLowerCase());
     const matchesType = activeType === 'all' || a.type === activeType;
     return matchesSearch && matchesType;
   });
 
-  const handleRegister = () => {
-    if (!newAssetData.url || !newAssetData.title) return;
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const finalType = newAssetData.url.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 
-                      newAssetData.url.match(/\.(pdf|doc|docx|txt)$/i) ? 'document' : 'image';
-
-    const newAsset: MediaAsset = {
-      id: `MD-${Math.floor(Math.random() * 1000)}`,
-      title: newAssetData.title,
-      type: finalType,
-      source: newAssetData.url.includes('drive.google.com') ? 'drive' : 'external',
-      size: '---',
-      date: 'Today',
-      url: newAssetData.url,
-      category: newAssetData.category
-    };
-
-    setMediaAssets(prev => [newAsset, ...prev]);
-    setIsRegistering(false);
-    setNewAssetData({ title: '', url: '', category: 'General', type: 'image' });
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      await uploadMedia(file, {
+        category: newAssetData.category,
+        title: newAssetData.title || file.name,
+        alt_text: newAssetData.alt_text
+      });
+      setIsRegistering(false);
+      setNewAssetData({ title: '', category: 'General', alt_text: '' });
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(t[lang].confirmDelete)) {
-      setMediaAssets(prev => prev.filter(a => a.id !== id));
+      try {
+        await deleteMedia(id);
+      } catch {
+        alert("Delete failed");
+      }
     }
   };
 
@@ -147,7 +157,7 @@ export const MediaManagerModal = ({
               onClick={() => setIsRegistering(true)}
               className="flex items-center gap-2 px-6 py-3 bg-accent-violet hover:bg-accent-violet/90 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-accent-violet/20"
             >
-              <Plus className="w-4 h-4" /> {t[lang].registerBtn}
+              <Upload className="w-4 h-4" /> {t[lang].registerBtn}
             </button>
             <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl text-white/20 hover:text-white transition-colors border border-white/5">
               <XCircle className="w-6 h-6" />
@@ -162,9 +172,9 @@ export const MediaManagerModal = ({
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className={`px-8 py-6 border-b border-white/10 bg-accent-violet/5 flex flex-wrap items-end gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}
+              className={`px-8 py-8 border-b border-white/10 bg-accent-violet/5 grid grid-cols-1 md:grid-cols-4 gap-6 items-end relative overflow-hidden ${isRtl ? 'rtl' : ''}`}
             >
-              <div className="flex-1 min-w-[200px]">
+              <div className="md:col-span-1">
                 <label className="block text-[10px] font-mono font-black text-white/40 uppercase mb-2">{t[lang].add.name}</label>
                 <input 
                   type="text" 
@@ -174,17 +184,7 @@ export const MediaManagerModal = ({
                   placeholder={t[lang].add.placeholder}
                 />
               </div>
-              <div className="flex-2 min-w-[300px]">
-                <label className="block text-[10px] font-mono font-black text-white/40 uppercase mb-2">{t[lang].add.url}</label>
-                <input 
-                  type="text" 
-                  value={newAssetData.url}
-                  onChange={e => setNewAssetData(p => ({ ...p, url: e.target.value }))}
-                  className={`w-full bg-black border border-white/10 rounded-lg px-4 py-3 text-xs text-white focus:outline-none focus:border-accent-violet transition-colors ${isRtl ? 'text-right' : ''}`}
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="flex-1 min-w-[150px]">
+              <div className="md:col-span-1">
                 <label className="block text-[10px] font-mono font-black text-white/40 uppercase mb-2">{t[lang].add.category}</label>
                 <select 
                   value={newAssetData.category}
@@ -196,20 +196,39 @@ export const MediaManagerModal = ({
                   ))}
                 </select>
               </div>
-              <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <button 
-                  onClick={handleRegister}
-                  className="p-3 bg-white text-black rounded-lg hover:bg-accent-violet transition-colors flex items-center justify-center"
-                >
-                  <Check className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => setIsRegistering(false)}
-                  className="p-3 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
+
+              <div className="md:col-span-2">
+                <label className="block text-[10px] font-mono font-black text-white/40 uppercase mb-2">Secure Upload</label>
+                <div className="relative group/zone">
+                  <input 
+                    type="file" 
+                    onChange={handleUpload}
+                    disabled={isUploading}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
+                  />
+                  <div className={`w-full h-12 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center gap-3 transition-all group-hover/zone:border-accent-violet/50 ${isUploading ? 'bg-white/5' : ''}`}>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-accent-violet" />
+                        <span className="text-[10px] font-black uppercase text-white/60 animate-pulse">{t[lang].uploading}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-white/20 group-hover/zone:text-accent-violet transition-colors" />
+                        <span className="text-[10px] font-black uppercase text-white/30 group-hover/zone:text-white transition-colors">{t[lang].browse}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {uploadError && <p className="text-[9px] text-red-500 mt-2 font-mono uppercase tracking-widest">{uploadError}</p>}
               </div>
+
+              <button 
+                onClick={() => setIsRegistering(false)}
+                className="absolute top-2 right-2 p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-all"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -263,7 +282,7 @@ export const MediaManagerModal = ({
                     
                     {/* Source Icon Overlay */}
                     <div className={`absolute top-4 p-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 ${isRtl ? 'right-4' : 'left-4'}`}>
-                      {asset.source === 'drive' ? <HardDrive className="w-4 h-4 text-green-400" /> : <Link className="w-4 h-4 text-blue-400" />}
+                      {asset.source === 'upload' ? <Upload className="w-4 h-4 text-accent-violet" /> : asset.source === 'drive' ? <HardDrive className="w-4 h-4 text-green-400" /> : <Link className="w-4 h-4 text-blue-400" />}
                     </div>
 
                     {/* Quick Badge */}
@@ -283,7 +302,7 @@ export const MediaManagerModal = ({
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigator.clipboard.writeText(asset.url);
+                                navigator.clipboard.writeText(asset.full_url);
                               }}
                               className="w-3/4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-[10px] uppercase tracking-[0.2em] py-3 rounded-xl transition-all"
                             >

@@ -2,11 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 const CosmicBackground: React.FC = () => {
-    const [stars] = useState(() => Array.from({ length: 60 }).map((_, i) => ({
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const [stars] = useState(() => Array.from({ length: isMobile ? 30 : 70 }).map((_, i) => ({
         id: i,
         top: `${Math.random() * 100}%`,
         left: `${Math.random() * 100}%`,
-        size: Math.random() * 1.5 + 0.5,
+        size: Math.random() * (isMobile ? 1 : 1.5) + 0.5,
         duration: Math.random() * 3 + 2,
         delay: Math.random() * 5
     })));

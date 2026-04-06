@@ -33,6 +33,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const clearChats = () => {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('portfolio_chat_')) {
+        localStorage.removeItem(key);
+      }
+    });
+  };
+
   const login = async (email: string, password: string) => {
     const trimmedEmail = email.trim().toLowerCase();
     
@@ -55,6 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       setUser(adminUser);
       localStorage.setItem('portfolio_session', JSON.stringify(adminUser));
+      clearChats();
       return true;
     }
 
@@ -76,6 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
       setUser(sessionUser);
       localStorage.setItem('portfolio_session', JSON.stringify(sessionUser));
+      clearChats();
       return true;
     }
 
@@ -114,13 +124,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setUser(sessionUser);
     localStorage.setItem('portfolio_session', JSON.stringify(sessionUser));
-
+    clearChats();
     return { success: true };
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('portfolio_session');
+    clearChats();
     supabase.auth.signOut();
   };
 

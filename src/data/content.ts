@@ -1,13 +1,17 @@
 export type Language = 'en' | 'ar';
 
 export interface Content {
-  hero: {
+    hero: {
     badge: { en: string; ar: string };
     title: { en: string; ar: string };
     subtitle: { en: string; ar: string };
     ctaPrimary: { en: string; ar: string };
     ctaSecondary: { en: string; ar: string };
     floatingKeywords: { en: string; ar: string }[];
+    background: {
+      type: 'video' | 'image' | 'gif';
+      url: string;
+    };
   };
   laptop: {
     title: { en: string; ar: string };
@@ -116,7 +120,11 @@ export const content: Content = {
       { en: "Digital Experience", ar: "تجربة رقمية" },
       { en: "Global Standards", ar: "معايير عالمية" },
       { en: "Artful Precision", ar: "دقة فنية" }
-    ]
+    ],
+    background: {
+      type: 'video',
+      url: '/hero-bg.mp4'
+    }
   },
   laptop: {
     title: { en: "Interactive Portfolio", ar: "المعرض التفاعلي" },

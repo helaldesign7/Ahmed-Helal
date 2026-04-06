@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Send, X, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdmin } from '../../contexts/useAdmin';
 
@@ -34,7 +35,7 @@ const TRANSLATIONS = {
     welcomeBack: 'Welcome back',
     error: '[SYSTEM ERROR: Unable to reach core processor.] Please try again later.',
     fallback: 'I was unable to process that.',
-    guardLanguage: 'Always respond in the language of the USER.'
+    guardLanguage: 'LANGUAGE_AGNOSTIC: Detect the language of the user query. ALWAYS respond in the SAME language the user is speaking. If the user speaks Arabic, respond in Arabic. If English, respond in English. If any other language, use that language fluently.'
   },
   ar: {
     terminal: 'محطة أورا الذكية',
@@ -44,51 +45,87 @@ const TRANSLATIONS = {
     welcomeBack: 'مرحباً بعودتك',
     error: '[خطأ في النظام: لا يمكن الوصول للمعالج.] يرجى المحاولة لاحقاً.',
     fallback: 'عذراً، لم أتمكن من معالجة هذا الطلب.',
-    guardLanguage: 'يجب الرد دائماً بنفس لغة المستخدم.'
+    guardLanguage: 'يجب الرد دائماً بنفس لغة المستخدم بالكامل وبطلاقة.'
   }
 };
 
 export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
   const { user } = useAuth();
   const { siteContent, config } = useAdmin();
-  const userId = user?.id || 'guest';
-  const storageKey = `portfolio_chat_${userId}`;
+  
+  // Use a stable anonymous session ID for guests
+  const [guestSessionId] = useState<string>(() => {
+    const saved = localStorage.getItem('aura_guest_session_id');
+    if (saved) return saved;
+    const newId = crypto.randomUUID();
+    localStorage.setItem('aura_guest_session_id', newId);
+    return newId;
+  });
+
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const isRtl = lang === 'ar';
 
   const assistantName = config.ai.assistantName || 'AURA';
 
   const getWelcomeText = useCallback(() => {
     const t = TRANSLATIONS[lang];
+    const customWelcome = lang === 'ar' ? config.ai.welcomeMessageAr : config.ai.welcomeMessageEn;
+
+    if (customWelcome) return customWelcome;
 
     if (user) {
       return `${t.online}. ${t.welcomeBack}, ${user.name.split(' ')[0]}. I am ${assistantName}. ${t.welcome}`;
     }
 
     return `${t.online}. I am ${assistantName}. ${t.welcome}`;
-  }, [user, lang, assistantName]);
+  }, [user, lang, assistantName, config.ai.welcomeMessageAr, config.ai.welcomeMessageEn]);
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) return JSON.parse(saved);
-    return [{ role: 'assistant', content: getWelcomeText() }];
-  });
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Initialize conversation and history
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(messages));
-  }, [messages, storageKey]);
+    const initChat = async () => {
+      try {
+        // Find existing conversation for this guest session
+        const { data: conv, error: convError } = await supabase
+          .from('chat_conversations')
+          .select('id')
+          .eq('guest_session_id', guestSessionId)
+          .eq('status', 'active')
+          .maybeSingle();
 
-  useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
-      setMessages([{ role: 'assistant', content: getWelcomeText() }]);
-    }
-  }, [userId, storageKey, getWelcomeText]);
+        if (convError) throw convError;
+
+        if (conv) {
+          setConversationId(conv.id);
+          // Load messages
+          const { data: msgs, error: msgsError } = await supabase
+            .from('chat_messages')
+            .select('role, content')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: true });
+
+          if (msgsError) throw msgsError;
+          
+          if (msgs && msgs.length > 0) {
+            setMessages(msgs as Message[]);
+          } else {
+            setMessages([{ role: 'assistant', content: getWelcomeText() }]);
+          }
+        } else {
+          setMessages([{ role: 'assistant', content: getWelcomeText() }]);
+        }
+      } catch (err) {
+        console.error("Chat Init Failed:", err);
+        setMessages([{ role: 'assistant', content: getWelcomeText() }]);
+      }
+    };
+
+    initChat();
+  }, [guestSessionId, getWelcomeText]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -107,6 +144,38 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
     setLoading(true);
 
     try {
+      // 1. Ensure conversation exists in Supabase
+      let currentConvId = conversationId;
+      if (!currentConvId) {
+        const { data: newConv, error: newConvError } = await supabase
+          .from('chat_conversations')
+          .insert({
+            guest_session_id: guestSessionId,
+            status: 'active',
+            metadata: { language: lang, started_at: new Date().toISOString() }
+          })
+          .select()
+          .single();
+
+        if (newConvError) throw newConvError;
+        currentConvId = newConv.id;
+        setConversationId(currentConvId);
+
+        // Save the very first assistant welcome message if it's the start
+        await supabase.from('chat_messages').insert({
+          conversation_id: currentConvId,
+          role: 'assistant',
+          content: getWelcomeText()
+        });
+      }
+
+      // 2. Save user message to Supabase
+      await supabase.from('chat_messages').insert({
+        conversation_id: currentConvId,
+        role: 'user',
+        content: userMessage
+      });
+
       const assistantNameSafe = config.ai.assistantName || 'AURA';
 
       const safetyGuardrails = `
@@ -131,10 +200,19 @@ Experience: ${siteContent.hero.subtitle?.[lang] || siteContent.hero.subtitle?.en
 
       const systemInstruction = `
 Identity: ${assistantNameSafe}. Official assistant for Ahmed Helal.
-System Base Prompt: ${config.ai.systemPrompt || 'Act as a helpful portfolio assistant.'}
+Base Personality: ${config.ai.tone || 'Cinematic/Robotic'}
+
+SYSTEM_GUIDELINES:
+${config.ai.systemPrompt || 'Act as a helpful portfolio assistant.'}
+
+KNOWLEDGE_BASE:
+${config.ai.knowledgeBase || 'Ahmed Helal is a visual designer.'}
+
 ${safetyGuardrails}
-Constraint: Respond under 60 words. Speak naturally but technically sound.
+
 ${TRANSLATIONS[lang].guardLanguage}
+
+Constraint: Respond under 100 words. Speak naturally but technically sound.
       `.trim();
 
       let aiText = '';
@@ -238,6 +316,20 @@ ${TRANSLATIONS[lang].guardLanguage}
       }
 
       setMessages((prev) => [...prev, { role: 'assistant', content: aiText }]);
+      
+      // 3. Save assistant message to Supabase
+      if (conversationId) {
+        await supabase.from('chat_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: aiText
+        });
+        
+        // Update last interaction
+        await supabase.from('chat_conversations')
+          .update({ last_message_at: new Date().toISOString() })
+          .eq('id', conversationId);
+      }
     } catch (error: unknown) {
       const err = error as Error;
       console.error('[AURA] Assistant Failure:', err.message || err);
@@ -264,8 +356,8 @@ ${TRANSLATIONS[lang].guardLanguage}
       initial={{ opacity: 0, y: 50, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 50, scale: 0.95 }}
-      className={`fixed bottom-28 w-[350px] sm:w-[420px] h-[580px] z-50 flex flex-col bg-primary-black/95 backdrop-blur-3xl border border-white/10 rounded-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden ${
-        isRtl ? 'left-8 text-right' : 'right-8 text-left'
+      className={`fixed bottom-20 md:bottom-28 right-4 md:right-10 w-[calc(100vw-2rem)] sm:w-[400px] h-[75vh] md:h-[600px] z-50 flex flex-col bg-primary-black/95 backdrop-blur-3xl border border-white/10 rounded-3xl sm:rounded-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden ${
+        isRtl ? 'text-right' : 'text-left'
       }`}
     >
       <div

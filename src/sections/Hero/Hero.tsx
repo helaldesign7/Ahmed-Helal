@@ -97,17 +97,29 @@ export const Hero = ({ lang }: HeroProps) => {
   return (
     <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-20 bg-transparent">
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <motion.video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          animate={{ scale: [1.05, 1.15, 1.05] }}
-          transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <source src="/hero-bg.mp4" type="video/mp4" />
-        </motion.video>
+        {hero.background.type === 'video' ? (
+          <motion.video
+            key={hero.background.url}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            animate={{ scale: [1.05, 1.15, 1.05] }}
+            transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <source src={hero.background.url} type="video/mp4" />
+          </motion.video>
+        ) : (
+          <motion.img 
+            key={hero.background.url}
+            src={hero.background.url}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            animate={{ scale: [1.05, 1.1, 1.05] }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
 
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" />
         <div className="absolute inset-0 bg-linear-to-b from-black/40 via-transparent to-black" />

@@ -14,10 +14,12 @@ import { Footer } from '../sections/Footer/Footer';
 import { Navbar } from '../components/common/Navbar';
 import { type Language } from '../data/content';
 import { useAdmin } from '../contexts/useAdmin';
+import { useMobileBack } from '../hooks/useMobileBack';
 
 export const PublicHome: FC = () => {
   const [lang, setLang] = useState<Language>('en');
   const { sections } = useAdmin();
+  useMobileBack();
 
   const toggleLanguage = () => {
     setLang(prev => prev === 'en' ? 'ar' : 'en');

@@ -1,17 +1,130 @@
 import { useState } from 'react';
-import { FolderGit2, Plus, Search, MoreVertical, Edit2, Archive, Trash2 } from 'lucide-react';
+import { FolderGit2, Plus, Search, MoreVertical, Edit2, Archive, Trash2, GripVertical } from 'lucide-react';
 import { ProjectEditorModal } from '../components/projects/ProjectEditorModal';
 import { useAdmin } from '../../contexts/useAdmin';
 import { useOutletContext } from 'react-router-dom';
 import type { Project } from '../../types/admin';
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableProjectRow = ({ project, lang, t, isRtl, handleEdit, handleArchive, handleDelete }: { project: Project, lang: string, t: any, isRtl: boolean, handleEdit: (p: Project) => void, handleArchive: (id: number, status: 'published'|'archived') => void, handleDelete: (id: number) => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className={`border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer ${isDragging ? 'shadow-2xl bg-white/5 border-l-2 border-accent-violet' : ''}`}>
+      <td className={`px-6 py-5 ${isRtl ? 'text-right' : 'text-left'}`}>
+        <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-white/10 transition-colors opacity-50 hover:opacity-100" onClick={e => e.stopPropagation()}>
+            <GripVertical className="w-4 h-4 text-white" />
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+             {project.featuredMediaUrl ? (
+               <img src={project.featuredMediaUrl} alt="" className="w-full h-full object-cover" />
+             ) : (
+               <FolderGit2 className="w-4 h-4 text-white/50" />
+             )}
+          </div>
+          <div>
+            <div className={`font-black text-white text-sm uppercase tracking-wider flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              {project.title}
+              {project.isFeatured && (
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-violet" title="Featured Project" />
+              )}
+            </div>
+            <div className="text-[9px] font-mono text-white/40 mt-1 uppercase tracking-widest text-wrap max-w-44 break-all">ID_{project.id}</div>
+          </div>
+        </div>
+      </td>
+      <td className={`px-6 py-4 text-xs font-mono opacity-80 ${isRtl ? 'text-right' : 'text-left'}`}>{project.category}</td>
+      <td className={`px-6 py-4 ${isRtl ? 'text-right' : 'text-left'}`}>
+        {project.status === 'published' ? (
+          <span className="px-2 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-mono uppercase tracking-wider">
+            {t[lang].status.published}
+          </span>
+        ) : (
+          <span className="px-2 py-1 bg-white/5 text-white/40 border border-white/10 rounded text-[9px] font-mono uppercase tracking-wider">
+            {t[lang].status.archived}
+          </span>
+        )}
+      </td>
+      <td className={`px-6 py-4 text-xs font-mono ripple-effect ${isRtl ? 'text-right' : 'text-left'}`}>{project.date}</td>
+      <td className={`px-6 py-4 ${isRtl ? 'text-left' : 'text-right'}`}>
+        <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isRtl ? 'justify-start' : 'justify-end'}`}>
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleEdit(project); }}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white" 
+            title={t[lang].tooltips.edit}
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleArchive(project.id, project.status); }}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-accent-violet" 
+            title={project.status === 'published' ? t[lang].tooltips.archive : t[lang].tooltips.publish}
+          >
+            <Archive className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-red-400" 
+            title={t[lang].tooltips.delete}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white" title={t[lang].tooltips.more}>
+            <MoreVertical className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 export const ProjectsManager = () => {
-  const { projects, updateProject, deleteProject } = useAdmin();
+  const { projects, updateProject, deleteProject, reorderProjects } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'published' | 'archived'>('all');
   const [editingProject, setEditingProject] = useState<Project | undefined>(undefined);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = projects.findIndex((s: Project) => s.id === active.id);
+      const newIndex = projects.findIndex((s: Project) => s.id === over.id);
+      if(oldIndex !== -1 && newIndex !== -1){
+        await reorderProjects(active.id as number, newIndex);
+      }
+    }
+  };
 
   const isRtl = lang === 'ar';
 
@@ -82,12 +195,12 @@ export const ProjectsManager = () => {
     }
   };
 
-  const filteredProjects = projects.filter(p => {
+  const filteredProjects = projects.filter((p: Project) => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || 
                          p.category.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === 'all' || p.status === filter;
     return matchesSearch && matchesFilter;
-  });
+  }).sort((a: Project, b: Project) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
   const handleCreateNew = () => {
     setEditingProject(undefined);
@@ -149,7 +262,6 @@ export const ProjectsManager = () => {
                     filter === f ? 'text-accent-violet bg-accent-violet/10' : 'text-white/40 hover:text-white/80'
                   }`}
                 >
-                  {/* @ts-ignore */}
                   {t[lang][f]}
                 </button>
              ))}
@@ -168,73 +280,24 @@ export const ProjectsManager = () => {
                 <th className={`px-6 py-4 font-medium ${isRtl ? 'text-left' : 'text-right'}`}>{t[lang].table.actions}</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredProjects.map(project => (
-                <tr key={project.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group cursor-pointer">
-                  <td className={`px-6 py-5 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
-                         {project.featuredMediaUrl ? (
-                           <img src={project.featuredMediaUrl} alt="" className="w-full h-full object-cover" />
-                         ) : (
-                           <FolderGit2 className="w-4 h-4 text-white/50" />
-                         )}
-                      </div>
-                      <div>
-                        <div className={`font-black text-white text-sm uppercase tracking-wider flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          {project.title}
-                          {project.isFeatured && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-accent-violet" title="Featured Project" />
-                          )}
-                        </div>
-                        <div className="text-[9px] font-mono text-white/40 mt-1 uppercase tracking-widest text-wrap max-w-44 break-all">ID_{project.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className={`px-6 py-4 text-xs font-mono opacity-80 ${isRtl ? 'text-right' : 'text-left'}`}>{project.category}</td>
-                  <td className={`px-6 py-4 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    {project.status === 'published' ? (
-                      <span className="px-2 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-mono uppercase tracking-wider">
-                        {t[lang].status.published}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 bg-white/5 text-white/40 border border-white/10 rounded text-[9px] font-mono uppercase tracking-wider">
-                        {t[lang].status.archived}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`px-6 py-4 text-xs font-mono ripple-effect ${isRtl ? 'text-right' : 'text-left'}`}>{project.date}</td>
-                  <td className={`px-6 py-4 ${isRtl ? 'text-left' : 'text-right'}`}>
-                    <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isRtl ? 'justify-start' : 'justify-end'}`}>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleEdit(project); }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white" 
-                        title={t[lang].tooltips.edit}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleArchive(project.id, project.status); }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-accent-violet" 
-                        title={project.status === 'published' ? t[lang].tooltips.archive : t[lang].tooltips.publish}
-                      >
-                        <Archive className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-red-400" 
-                        title={t[lang].tooltips.delete}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white" title={t[lang].tooltips.more}>
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={filteredProjects.map((p: Project) => p.id)} strategy={verticalListSortingStrategy}>
+                <tbody className="bg-transparent">
+                  {filteredProjects.map((project: Project) => (
+                    <SortableProjectRow 
+                      key={project.id} 
+                      project={project} 
+                      lang={lang}
+                      t={t}
+                      isRtl={isRtl}
+                      handleEdit={handleEdit}
+                      handleArchive={handleArchive}
+                      handleDelete={handleDelete}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+             </DndContext>
           </table>
         </div>
         

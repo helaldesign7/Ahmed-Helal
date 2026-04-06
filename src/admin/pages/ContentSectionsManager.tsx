@@ -1,19 +1,122 @@
 import { useState } from 'react';
 import { LayoutList, GripVertical, ArrowUp, ArrowDown, Image as ImageIcon, MessageSquareQuote, Link as LinkIcon, Edit3, X } from 'lucide-react';
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useAdmin } from '../../contexts/useAdmin';
 import { DictionaryEditor } from '../components/DictionaryEditor';
 import { TestimonialsManager } from '../components/sub-managers/TestimonialsManager';
 import { ClientLogosManager } from '../components/sub-managers/ClientLogosManager';
 import { SocialLinksManager } from '../components/sub-managers/SocialLinksManager';
 import { useOutletContext } from 'react-router-dom';
+import type { SectionBlueprint, SectionId } from '../../types/admin';
+
+// --- Sortable Item Component ---
+const SortableSectionItem = ({ 
+  section, index, total, lang, t, isRtl, moveSection, toggleVisibility, activeEditor, setActiveEditor 
+}: { 
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  section: SectionBlueprint; index: number; total: number; lang: 'en'|'ar'; t: any; isRtl: boolean; 
+  moveSection: (id: SectionId, direction: 'up'|'down') => void; toggleVisibility: (id: SectionId) => void; activeEditor: string | null; setActiveEditor: (id: string|null) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`bg-black/20 border border-white/5 rounded-xl overflow-hidden transition-colors duration-300 ${isDragging ? 'shadow-2xl shadow-accent-violet/20 border-accent-violet/50' : ''}`}>
+      <div className={`flex items-center justify-between p-3 bg-white/2 hover:bg-white/5 transition-colors group ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-white/5 transition-colors">
+            <GripVertical className="w-4 h-4 text-white/20 group-hover:text-white/50" />
+          </div>
+          <div className={`flex flex-col ${isRtl ? 'text-right' : ''}`}>
+            <span className="text-sm font-bold text-white mb-0.5">{section.name}</span>
+            <span className="text-[9px] font-mono uppercase tracking-widest text-accent-violet">{section.type} {t[lang].layer}</span>
+          </div>
+        </div>
+        <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <button onClick={() => moveSection(section.id, 'up')} disabled={index === 0} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            <ArrowUp className="w-3 h-3" />
+          </button>
+          <button onClick={() => moveSection(section.id, 'down')} disabled={index === total - 1} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            <ArrowDown className="w-3 h-3" />
+          </button>
+          <div className="w-px h-6 bg-white/10 mx-2"></div>
+          <button 
+            onClick={() => toggleVisibility(section.id)}
+            className={`min-w-[70px] px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-colors border ${section.isVisible ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
+          >
+            {section.isVisible ? t[lang].status.visible : t[lang].status.hidden}
+          </button>
+          <button 
+            onClick={() => setActiveEditor(activeEditor === section.id ? null : section.id)}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-2 ${isRtl ? 'mr-2' : 'ml-2'} ${activeEditor === section.id ? 'bg-accent-violet text-white border-accent-violet/50' : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white'}`}
+          >
+            {activeEditor === section.id ? <X className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+            {activeEditor === section.id ? t[lang].actions.close : t[lang].actions.edit}
+          </button>
+        </div>
+      </div>
+      
+      {activeEditor === section.id && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t border-white/5">
+          <DictionaryEditor sectionId={section.id} />
+        </div>
+      )}
+    </div>
+  );
+};
+// ------------------------------
 
 export const ContentSectionsManager = () => {
-  const { sections, toggleVisibility, moveSection } = useAdmin();
+  const { sections, toggleVisibility, moveSection, setSectionsOrder } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [activeEditor, setActiveEditor] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<'testimonials' | 'logos' | 'social' | null>(null);
 
   const isRtl = lang === 'ar';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = sections.findIndex((s) => s.id === active.id);
+      const newIndex = sections.findIndex((s) => s.id === over.id);
+      const newSections = arrayMove(sections, oldIndex, newIndex);
+      setSectionsOrder(newSections);
+    }
+  };
 
   const t = {
     en: {
@@ -97,48 +200,25 @@ export const ContentSectionsManager = () => {
           </h2>
           
           <div className="space-y-3">
-            {sections.map((section, index) => (
-              <div key={section.id} className="bg-black/20 border border-white/5 rounded-xl overflow-hidden transition-all duration-300">
-                <div className={`flex items-center justify-between p-3 bg-white/2 hover:bg-white/5 transition-colors group ${isRtl ? 'flex-row-reverse' : ''}`}>
-                  <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <GripVertical className="w-4 h-4 text-white/20 group-hover:text-white/50" />
-                    <div className={`flex flex-col ${isRtl ? 'text-right' : ''}`}>
-                      <span className="text-sm font-bold text-white mb-0.5">{section.name}</span>
-                      <span className="text-[9px] font-mono uppercase tracking-widest text-accent-violet">{section.type} {t[lang].layer}</span>
-                    </div>
-                  </div>
-                  <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <button onClick={() => moveSection(section.id, 'up')} disabled={index === 0} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                       <ArrowUp className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => moveSection(section.id, 'down')} disabled={index === sections.length - 1} className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/50 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                       <ArrowDown className="w-3 h-3" />
-                    </button>
-                    <div className="w-px h-6 bg-white/10 mx-2"></div>
-                    <button 
-                      onClick={() => toggleVisibility(section.id)}
-                      className={`min-w-[70px] px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-colors border ${section.isVisible ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
-                    >
-                      {section.isVisible ? t[lang].status.visible : t[lang].status.hidden}
-                    </button>
-                    <button 
-                      onClick={() => setActiveEditor(activeEditor === section.id ? null : section.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-2 ${isRtl ? 'mr-2' : 'ml-2'} ${activeEditor === section.id ? 'bg-accent-violet text-white border-accent-violet/50' : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white'}`}
-                    >
-                      {activeEditor === section.id ? <X className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
-                      {activeEditor === section.id ? t[lang].actions.close : t[lang].actions.edit}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Magic Dictionary Accordion */}
-                {activeEditor === section.id && (
-                  <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t border-white/5">
-                    <DictionaryEditor sectionId={section.id} />
-                  </div>
-                )}
-              </div>
-            ))}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                {sections.map((section, index) => (
+                  <SortableSectionItem
+                    key={section.id}
+                    section={section}
+                    index={index}
+                    total={sections.length}
+                    lang={lang}
+                    t={t}
+                    isRtl={isRtl}
+                    moveSection={moveSection}
+                    toggleVisibility={toggleVisibility}
+                    activeEditor={activeEditor}
+                    setActiveEditor={setActiveEditor}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
 
