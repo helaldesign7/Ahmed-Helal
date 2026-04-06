@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Layout, Search, Plus, Trash2, Code, GripVertical, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Code, GripVertical, ChevronRight } from 'lucide-react';
 import { 
   DndContext, 
   closestCenter,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   Link as LinkIcon, ExternalLink, Plus, Trash2, 
-  Globe, Github, FileText
+  Globe, Link2, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../../../contexts/useAdmin';
@@ -47,7 +47,7 @@ export const WorkspaceLinks = ({ projectId, initialLinks, onUpdate }: WorkspaceL
   const getPlatformIcon = (category: string) => {
     switch(category.toLowerCase()) {
       case 'figma': return <Globe className="w-5 h-5 text-accent-violet" />;
-      case 'github': return <Github className="w-5 h-5 text-white/60" />;
+      case 'github': return <Link2 className="w-5 h-5 text-white/60" />;
       case 'notion': return <FileText className="w-5 h-5 text-white/60" />;
       case 'drive': return <Globe className="w-5 h-5 text-blue-400" />;
       case 'behance': return <Globe className="w-5 h-5 text-blue-500" />;
@@ -151,7 +151,7 @@ export const WorkspaceLinks = ({ projectId, initialLinks, onUpdate }: WorkspaceL
                 key={link.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-accent-violet/30 hover:bg-white/[0.08] transition-all flex items-center gap-4 relative"
+                className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-accent-violet/30 hover:bg-white/8 transition-all flex items-center gap-4 relative"
               >
                 <div className="p-3 rounded-xl bg-white/5 border border-white/5 group-hover:bg-accent-violet/10 transition-colors">
                   {getPlatformIcon(link.category || 'Other')}

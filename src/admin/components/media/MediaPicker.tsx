@@ -33,7 +33,7 @@ export const MediaPicker = ({ value, onChange, label }: MediaPickerProps) => {
   };
 
   const handleSelect = (asset: MediaAsset) => {
-    onChange(asset.url);
+    onChange(asset.full_url);
     setIsOpen(false);
   };
 

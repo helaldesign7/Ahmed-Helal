@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { 
-  Plus, Trash2, Clock, MessageSquare, 
-  ChevronDown, Search, Filter, Save, X
+  Trash2, Clock, MessageSquare, Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../../../contexts/useAdmin';
@@ -56,7 +55,7 @@ export const WorkspaceNotes = ({ projectId, initialNotes, onUpdate }: WorkspaceN
           value={newNoteContent}
           onChange={(e) => setNewNoteContent(e.target.value)}
           onFocus={() => setIsAdding(true)}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent-violet/50 focus:bg-white/[0.08] transition-all resize-none custom-scrollbar"
+          className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent-violet/50 focus:bg-white/8 transition-all resize-none custom-scrollbar"
         />
 
         {isAdding && (

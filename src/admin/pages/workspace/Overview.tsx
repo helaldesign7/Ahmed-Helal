@@ -1,21 +1,20 @@
-import { motion } from 'framer-motion';
 import { 
   User, Mail, Phone, Calendar, DollarSign, 
-  Tag, Info, ExternalLink, Briefcase, FileText
+  Tag, Info, ExternalLink, FileText
 } from 'lucide-react';
-import type { CRMProject, CRMClient } from '../../../types/admin';
+import type { CRMProject, CRMClient, ProjectTask, ProjectNote, ProjectLink } from '../../../types/admin';
 
 interface WorkspaceOverviewProps {
   project: CRMProject;
   client: CRMClient | null;
   stats: {
-    tasks: any[];
-    notes: any[];
-    links: any[];
+    tasks: ProjectTask[];
+    notes: ProjectNote[];
+    links: ProjectLink[];
   };
 }
 
-export const WorkspaceOverview = ({ project, client, stats }: WorkspaceOverviewProps) => {
+export const WorkspaceOverview = ({ project, client }: WorkspaceOverviewProps) => {
   const infoCards = [
     { label: 'Client', value: client?.name || 'N/A', icon: User, sub: client?.brand_company },
     { label: 'Budget', value: `$${project.budget}`, icon: DollarSign, sub: `Paid: $${project.paid_amount}` },

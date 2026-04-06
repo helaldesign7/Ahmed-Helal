@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Layout, CheckCircle2, MessageSquare, 
-  Link as LinkIcon, Activity, Plus
+  Link as LinkIcon, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../../contexts/useAdmin';
 import type { 
-  CRMProject, ProjectTask, ProjectNote, 
+  CRMProject, CRMClient, ProjectTask, ProjectNote, 
   ProjectLink, ProjectActivity 
 } from '../../types/admin';
 
@@ -25,7 +25,7 @@ export const ProjectDetails = () => {
   
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'links' | 'timeline'>('overview');
   const [project, setProject] = useState<CRMProject | null>(null);
-  const [client, setClient] = useState<any>(null);
+  const [client, setClient] = useState<CRMClient | null>(null);
   
   const [data, setData] = useState<{
     tasks: ProjectTask[];
@@ -53,7 +53,7 @@ export const ProjectDetails = () => {
       setProject(proj);
       
       const cl = crmClients.find(c => c.id === proj.client_id);
-      setClient(cl);
+      setClient(cl || null);
 
       const res = await fetchProjectData(parseInt(id));
       setData(res);
@@ -119,7 +119,7 @@ export const ProjectDetails = () => {
         <div className="flex items-center gap-3 shrink-0">
           <select 
             value={project.status}
-            onChange={(e) => updateCrmProject(project.id, { status: e.target.value as any })}
+            onChange={(e) => updateCrmProject(project.id, { status: e.target.value as CRMProject['status'] })}
             className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-accent-violet/50 transition-all cursor-pointer"
           >
             <option value="pending">Pending</option>
@@ -136,7 +136,7 @@ export const ProjectDetails = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'overview' | 'tasks' | 'notes' | 'links' | 'timeline')}
             className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all relative whitespace-nowrap ${
               activeTab === tab.id ? 'text-accent-violet' : 'text-white/40 hover:text-white/60'
             }`}

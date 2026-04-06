@@ -1,5 +1,5 @@
 import { 
-  Activity, CheckCircle2, Circle, Clock, 
+  Activity, Clock, 
   MessageSquare, Plus, Trash2, Edit2, Link as LinkIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,11 +24,11 @@ export const WorkspaceTimeline = ({ activities }: WorkspaceTimelineProps) => {
   };
 
   const getActionLabel = (activity: ProjectActivity) => {
-    const details = activity.details as any;
+    const details = (activity.details || {}) as Record<string, string | number | undefined>;
     switch (activity.action) {
       case 'create_task': return `Task Created: "${details.title}"`;
       case 'update_task': 
-        if (details.status) return `Task Moved to ${details.status.replace('_', ' ')}: "${details.title}"`;
+        if (details.status) return `Task Moved to ${(details.status as string).replace('_', ' ')}: "${details.title}"`;
         return `Task Updated: "${details.title}"`;
       case 'delete_task': return `Task Deleted: "${details.title}"`;
       case 'add_note': return `Internal Note Added`;
@@ -55,7 +55,7 @@ export const WorkspaceTimeline = ({ activities }: WorkspaceTimelineProps) => {
 
       <div className="relative pl-8 space-y-10">
         {/* Timeline Line */}
-        <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-accent-violet/40 via-white/5 to-transparent" />
+        <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-linear-to-b from-accent-violet/40 via-white/5 to-transparent" />
 
         {activities.length === 0 ? (
           <div className="py-20 text-center space-y-4 opacity-30">
@@ -75,7 +75,7 @@ export const WorkspaceTimeline = ({ activities }: WorkspaceTimelineProps) => {
               <div className="absolute left-[-23px] top-1.5 w-3 h-3 rounded-full border-2 border-accent-violet bg-primary-black z-10 
                             group-hover:scale-125 transition-transform shadow-[0_0_8px_rgba(139,92,246,0.3)]" />
               
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/5 group-hover:border-accent-violet/20 group-hover:bg-white/[0.08] transition-all">
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/5 group-hover:border-accent-violet/20 group-hover:bg-white/8 transition-all">
                 {getActionIcon(activity.action)}
               </div>
 

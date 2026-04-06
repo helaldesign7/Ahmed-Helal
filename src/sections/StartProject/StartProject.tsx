@@ -58,7 +58,7 @@ export const StartProject = ({ lang }: StartProjectProps) => {
           hasIdentity: formData.hasIdentity,
           workType: formData.workType
         },
-        status: 'new' as const,
+        status: 'pending' as const,
         date: new Date().toISOString(),
         source: isLocal ? 'Form (Local Sync)' : 'Form (Cloud Sync)'
       };
