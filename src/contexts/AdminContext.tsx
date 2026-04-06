@@ -4,8 +4,9 @@ import { supabase } from '../lib/supabase';
 import type { 
   Project, Lead, Appearance, SectionId, SectionBlueprint,
   Notification, MediaAsset, AdminConfig, SystemStats,
-  CRMClient, CRMProject, ActivityLog, ChatConversation, ChatMessage,
-  ProjectTask, ProjectNote, ProjectLink, ProjectActivity
+  CRMClient, CRMProject, ActivityLog, ChatConversation,
+  ProjectTask, ProjectNote, ProjectLink, ProjectActivity,
+  AdminContextType
 } from '../types/admin';
 
 import { defaultBlueprint } from '../types/admin';
@@ -21,7 +22,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [conversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SystemStats>({
     visits: 2450,
@@ -283,7 +284,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pushNotification("Changes published & live!", "system", "Site Published");
       setTimeout(() => setSaveStatus('idle'), 3000);
       logActivity('publish', 'site_settings', 'global');
-    } catch (err) {
+    } catch (error) {
+      console.error("Save Changes Failed:", error);
       setSaveStatus('error');
       pushNotification("Failed to publish changes.", "system", "Error");
       setTimeout(() => setSaveStatus('idle'), 5000);
@@ -363,14 +365,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCrmProjects(prev => prev.filter(p => p.id !== id));
     await supabase.from('crm_projects').delete().eq('id', id);
   }, []);
+  const reorderCrmProjects = useCallback(async (id: number, newIndex: number) => {
+    setCrmProjects(prev => {
+      const result = [...prev];
+      const oldIndex = result.findIndex(p => p.id === id);
+      if (oldIndex === -1) return prev;
+      const [removed] = result.splice(oldIndex, 1);
+      result.splice(newIndex, 0, removed);
+      const updated = result.map((p, i) => ({ ...p, display_order: i }));
+      Promise.all(updated.map(p => supabase.from('crm_projects').update({ display_order: p.display_order }).eq('id', p.id)));
+      return updated;
+    });
+  }, []);
 
-  const uploadMedia = useCallback(async (file: File, meta: { category?: string; alt_text?: string; title?: string }) => {
+  const uploadMedia = useCallback(async (file: File, metadata?: { category?: string; alt_text?: string; title?: string }) => {
     const fileName = `${Date.now()}-${file.name}`;
     const { data: uploadData, error: uploadError } = await supabase.storage.from('portfolio_assets').upload(fileName, file);
     if (uploadError) throw uploadError;
     const { data: { publicUrl } } = supabase.storage.from('portfolio_assets').getPublicUrl(uploadData.path);
     const { data: asset, error: dbError } = await supabase.from('media_assets').insert([{
-      name: file.name, url: publicUrl, type: file.type.split('/')[0], category: meta?.category || 'general'
+      name: file.name, url: publicUrl, type: file.type.split('/')[0], category: metadata?.category || 'general'
     }]).select().single();
     if (dbError) throw dbError;
     setMediaAssets(prev => [asset as MediaAsset, ...prev]);
@@ -411,29 +425,34 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await supabase.from('site_settings').upsert({ id: 'global', content: payload });
   }, [appearance, config, siteContent, sections]);
 
+  const updateStats = useCallback((newStats: Partial<SystemStats>) => {
+    setStats(prev => ({ ...prev, ...newStats }));
+  }, []);
+
   // --- 8. Context Provisioning ---
 
-  const value = useMemo(() => ({
-    projects, leads, crmClients, crmProjects, appearance, siteContent, sections, config,
-    loading, mediaAssets, notifications, stats, activityLogs, conversations, isDirty, saveStatus,
+  const value = useMemo<AdminContextType>(() => ({
+    projects, setProjects, leads, setLeads, crmClients, setCrmClients, crmProjects, setCrmProjects,
+    appearance, siteContent, sections, config, setConfig,
+    loading, mediaAssets, setMediaAssets, notifications, setNotifications, stats, activityLogs, conversations, isDirty, saveStatus,
     setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
     moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
-    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject,
+    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
     addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
-    fetchConversations: async () => {}, fetchMessages: async () => [], updateAiConfig, logActivity, updateStats: () => {}
+    fetchConversations: async () => {}, fetchMessages: async () => [], updateAiConfig, logActivity, updateStats
   }), [
     projects, leads, crmClients, crmProjects, appearance, siteContent, sections, config,
     loading, mediaAssets, notifications, stats, activityLogs, conversations, isDirty, saveStatus,
     setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
     moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
-    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject,
+    addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
     addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
-    updateAiConfig, logActivity
+    updateAiConfig, logActivity, updateStats
   ]);
 
-  return <AdminContext.Provider value={value as any}>{children}</AdminContext.Provider>;
+  return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 };
