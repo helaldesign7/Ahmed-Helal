@@ -142,8 +142,17 @@ export const ChatPanel = ({ onClose, lang }: ChatPanelProps) => {
         });
 
         if (!response.ok) {
-          console.warn(`[AURA] Function response not OK: ${response.status} ${response.statusText}`);
-          throw new Error("FUNCTION_OFFLINE");
+          let errorBody = "";
+          try { 
+            const errorData = await response.json();
+            errorBody = errorData.error || errorData.message || "";
+          } catch {
+            // Ignore parse errors for non-JSON bodies
+          }
+          
+          const statusDetail = `${response.status} ${response.statusText}`;
+          console.warn(`[AURA] Function Error: ${statusDetail}`, errorBody);
+          throw new Error(`HTTP_${response.status}: ${errorBody || statusDetail}`);
         }
         
         const data = await response.json();
