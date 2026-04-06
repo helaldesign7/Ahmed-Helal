@@ -46,110 +46,170 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
 
   // --- 2. Data Fetching ---
+  const fetchActivityLogs = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      if (data) setActivityLogs(data as ActivityLog[]);
+    } catch (err) {
+      console.warn('[AdminContext] Activity logs fetch error:', err);
+    }
+  }, []);
+
+  const fetchProjectsData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('displayorder', { ascending: true });
+      if (error) throw error;
+      if (data) setProjects(data as Project[]);
+    } catch (err) {
+      console.warn('[AdminContext] Projects fetch error:', err);
+    }
+  }, []);
+
+  const fetchLeadsData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('date', { ascending: false });
+      if (error) throw error;
+      if (data) setLeads(data as Lead[]);
+    } catch (err) {
+      console.warn('[AdminContext] Leads fetch error:', err);
+    }
+  }, []);
+
+  const fetchCrmData = useCallback(async () => {
+    try {
+      const [{ data: clients }, { data: crmProjs }] = await Promise.all([
+        supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
+        supabase.from('crm_projects').select('*').order('created_at', { ascending: false })
+      ]);
+      if (clients) setCrmClients(clients as CRMClient[]);
+      if (crmProjs) setCrmProjects(crmProjs as CRMProject[]);
+    } catch (err) {
+      console.warn('[AdminContext] CRM fetch error:', err);
+    }
+  }, []);
+
+  const fetchMediaAssetsData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('media_assets')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) setMediaAssets(data as MediaAsset[]);
+    } catch (err) {
+      console.warn('[AdminContext] Media Assets fetch error:', err);
+    }
+  }, []);
+
+  const fetchSiteSettingsData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('content')
+        .eq('id', 'global')
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data?.content) {
+        const s = data.content;
+        if (s.appearance) setAppearance(prev => ({ ...prev, ...s.appearance }));
+        if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
+        if (s.siteContent) {
+          setSiteContent(prev => {
+            const merged = { ...prev };
+            Object.entries(s.siteContent).forEach(([key, value]) => {
+              const sectionKey = key as keyof Content;
+              if (!value) return;
+
+              if (Array.isArray(value)) {
+                (merged as Record<string, unknown>)[sectionKey] = value;
+              } else if (typeof value === 'object' && prev[sectionKey]) {
+                (merged as Record<string, unknown>)[sectionKey] = { 
+                  ...(prev[sectionKey] as object), 
+                  ...(value as object) 
+                };
+              } else {
+                (merged as Record<string, unknown>)[sectionKey] = value;
+              }
+            });
+            return merged;
+          });
+        }
+        if (s.sections) setSections(s.sections);
+      }
+    } catch (err) {
+      console.error('[AdminContext] Critical Settings failed:', err);
+    }
+  }, []);
+
   const fetchGlobalData = useCallback(async () => {
     try {
       setLoading(true);
       console.log('[AdminContext] Starting secure data fetch sequence...');
-
-      try {
-        const { data, error } = await supabase
-          .from('activity_logs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (error) throw error;
-        if (data) setActivityLogs(data as ActivityLog[]);
-      } catch (err) {
-        console.warn('[AdminContext] Activity logs fetch error:', err);
-      }
-
-      // 1. Projects
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .order('displayorder', { ascending: true });
-        if (error) throw error;
-        if (data) setProjects(data as Project[]);
-      } catch (err) {
-        console.warn('[AdminContext] Projects fetch error:', err);
-      }
-
-      // 2. Leads
-      try {
-        const { data, error } = await supabase
-          .from('leads')
-          .select('*')
-          .order('date', { ascending: false });
-        if (error) throw error;
-        if (data) setLeads(data as Lead[]);
-      } catch (err) {
-        console.warn('[AdminContext] Leads fetch error:', err);
-      }
-
-      // 3. CRM Clients & Projects
-      try {
-        const [{ data: clients }, { data: crmProjs }] = await Promise.all([
-          supabase.from('crm_clients').select('*').order('created_at', { ascending: false }),
-          supabase.from('crm_projects').select('*').order('created_at', { ascending: false })
-        ]);
-        if (clients) setCrmClients(clients as CRMClient[]);
-        if (crmProjs) setCrmProjects(crmProjs as CRMProject[]);
-      } catch (err) {
-        console.warn('[AdminContext] CRM fetch error:', err);
-      }
-
-      // 4. Site Settings (Critical Content)
-      try {
-        const { data, error } = await supabase
-          .from('site_settings')
-          .select('content')
-          .eq('id', 'global')
-          .maybeSingle();
-        
-        if (error) throw error;
-        
-        if (data?.content) {
-          const s = data.content;
-          if (s.appearance) setAppearance(prev => ({ ...prev, ...s.appearance }));
-          if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
-          if (s.siteContent) {
-            setSiteContent(prev => {
-              const merged = { ...prev };
-              Object.entries(s.siteContent).forEach(([key, value]) => {
-                const sectionKey = key as keyof Content;
-                if (!value) return;
-
-                if (Array.isArray(value)) {
-                  (merged as Record<string, unknown>)[sectionKey] = value;
-                } else if (typeof value === 'object' && prev[sectionKey]) {
-                  (merged as Record<string, unknown>)[sectionKey] = { 
-                    ...(prev[sectionKey] as object), 
-                    ...(value as object) 
-                  };
-                } else {
-                  (merged as Record<string, unknown>)[sectionKey] = value;
-                }
-              });
-              return merged;
-            });
-          }
-          if (s.sections) setSections(s.sections);
-        }
-      } catch (err) {
-        console.error('[AdminContext] Critical Settings failed:', err);
-      }
-      
+      await Promise.all([
+        fetchActivityLogs(),
+        fetchProjectsData(),
+        fetchLeadsData(),
+        fetchCrmData(),
+        fetchMediaAssetsData(),
+        fetchSiteSettingsData()
+      ]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchActivityLogs, fetchProjectsData, fetchLeadsData, fetchCrmData, fetchMediaAssetsData, fetchSiteSettingsData]);
 
   useEffect(() => {
     fetchGlobalData();
-  }, [fetchGlobalData]);
+    
+    // --- Targeted Real-time Subscriptions (Public Only) ---
+    const siteSettingsSub = supabase
+      .channel('public-site-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: 'id=eq.global' }, () => {
+        console.log('[Sync] Site settings changed, updating public state...');
+        fetchSiteSettingsData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
+        console.log('[Sync] Projects changed, updating public list...');
+        fetchProjectsData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_assets' }, () => {
+        console.log('[Sync] Media assets changed, updating library...');
+        fetchMediaAssetsData();
+      })
+      .subscribe();
 
-  // --- 3. Logging Helper ---
+    return () => {
+      supabase.removeChannel(siteSettingsSub);
+    };
+  }, [fetchGlobalData, fetchSiteSettingsData, fetchProjectsData, fetchMediaAssetsData]);
+
+  // --- 3. Notification & Activity Helpers ---
+  const pushNotification = useCallback((message: string, type: 'lead' | 'system' | 'update' = 'system', title?: string) => {
+    const id = Date.now().toString();
+    setNotifications(prev => [{
+      id,
+      title: title || (type === 'system' ? 'System Sync' : 'Update'),
+      description: message,
+      time: new Date().toLocaleTimeString(),
+      type,
+      read: false,
+      link: '#'
+    }, ...prev]);
+  }, []);
+
   const logActivity = useCallback(async (action: string, targetType: string, targetId?: string, details?: Record<string, unknown>) => {
     try {
       const { error } = await supabase.from('activity_logs').insert({
@@ -171,6 +231,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     siteContent?: Content;
     sections?: SectionBlueprint[];
   }) => {
+    const previous = { appearance, config, siteContent, sections };
     const payload = {
       appearance: overrides?.appearance || appearance,
       config: overrides?.config || config,
@@ -190,9 +251,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (error) throw error;
       console.log("[AdminContext] Global Sync Success");
     } catch (err) {
+      // Rollback logic
+      if (overrides?.appearance) setAppearance(previous.appearance);
+      if (overrides?.config) setConfig(previous.config);
+      if (overrides?.siteContent) setSiteContent(previous.siteContent);
+      if (overrides?.sections) setSections(previous.sections);
+      
+      pushNotification("Failed to sync settings with cloud. Changes reverted.", "system");
       console.error("[AdminContext] Global Sync Failed:", err);
     }
-  }, [appearance, config, siteContent, sections]);
+  }, [appearance, config, siteContent, sections, pushNotification]);
 
   const toggleVisibility = async (id: SectionId) => {
     setSections(prev => {
@@ -268,28 +336,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logActivity('create', 'project', data[0].id.toString(), { title: data[0].title });
       }
     } catch (err) {
+      pushNotification("Failed to add project to cloud.", "system");
       console.error("Error adding project:", err);
     }
   };
 
   const updateProject = async (id: number, updates: Partial<Project>) => {
+    const previous = [...projects];
     try {
+      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
       const { error } = await supabase.from('projects').update(updates).eq('id', id);
       if (error) throw error;
-      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
       logActivity('update', 'project', id.toString(), updates);
     } catch (err) {
+      setProjects(previous);
       console.error("Error updating project:", err);
     }
   };
 
   const deleteProject = async (id: number) => {
+    const previous = [...projects];
     try {
+      setProjects(prev => prev.filter(p => p.id !== id));
       const { error } = await supabase.from('projects').delete().eq('id', id);
       if (error) throw error;
-      setProjects(prev => prev.filter(p => p.id !== id));
       logActivity('delete', 'project', id.toString());
     } catch (err) {
+      setProjects(previous);
       console.error("Error deleting project:", err);
     }
   };
@@ -303,11 +376,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logActivity('create', 'lead', data[0].id.toString(), { name: data[0].name });
       }
     } catch (err) {
+      pushNotification("Failed to add lead.", "system");
       console.error("Error adding lead:", err);
     }
   };
 
   const updateLead = async (id: number, updates: Partial<Lead>) => {
+    const previous = [...leads];
     try {
       // Optimistic locally
       setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
@@ -315,17 +390,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (error) throw error;
       logActivity('update', 'lead', id.toString(), updates);
     } catch (err) {
+      setLeads(previous);
       console.error("Error updating lead:", err);
     }
   };
 
   const deleteLead = async (id: number) => {
+    const previous = [...leads];
     try {
       setLeads(prev => prev.filter(l => l.id !== id));
       const { error } = await supabase.from('leads').delete().eq('id', id);
       if (error) throw error;
       logActivity('delete', 'lead', id.toString());
     } catch (err) {
+      setLeads(previous);
+      pushNotification("Failed to delete lead. Reverted.", "system");
       console.error("Error deleting lead:", err);
     }
   };
@@ -340,28 +419,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logActivity('create', 'client', data.id.toString(), { name: data.name });
       }
     } catch (err) {
+      pushNotification("Failed to add CRM client.", "system");
       console.error("Error adding CRM client:", err);
     }
   };
 
   const updateCrmClient = async (id: number, updates: Partial<CRMClient>) => {
+    const previous = [...crmClients];
     try {
       setCrmClients(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
       const { error } = await supabase.from('crm_clients').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
       logActivity('update', 'client', id.toString(), updates);
     } catch (err) {
+      setCrmClients(previous);
+      pushNotification("Failed to update CRM client.", "system");
       console.error("Error updating CRM client:", err);
     }
   };
 
   const deleteCrmClient = async (id: number) => {
+    const previous = [...crmClients];
     try {
       setCrmClients(prev => prev.filter(c => c.id !== id));
       const { error } = await supabase.from('crm_clients').delete().eq('id', id);
       if (error) throw error;
       logActivity('delete', 'client', id.toString());
     } catch (err) {
+      setCrmClients(previous);
+      pushNotification("Failed to delete CRM client.", "system");
       console.error("Error deleting CRM client:", err);
     }
   };
@@ -376,28 +462,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logActivity('create', 'crm_project', data.id.toString(), { name: data.project_name });
       }
     } catch (err) {
+      pushNotification("Failed to add CRM project.", "system");
       console.error("Error adding CRM project:", err);
     }
   };
 
   const updateCrmProject = async (id: number, updates: Partial<CRMProject>) => {
+    const previous = [...crmProjects];
     try {
       setCrmProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
       const { error } = await supabase.from('crm_projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
       logActivity('update', 'crm_project', id.toString(), updates);
     } catch (err) {
+      setCrmProjects(previous);
+      pushNotification("Failed to update CRM project.", "system");
       console.error("Error updating CRM project:", err);
     }
   };
 
   const deleteCrmProject = async (id: number) => {
+    const previous = [...crmProjects];
     try {
       setCrmProjects(prev => prev.filter(p => p.id !== id));
       const { error } = await supabase.from('crm_projects').delete().eq('id', id);
       if (error) throw error;
       logActivity('delete', 'crm_project', id.toString());
     } catch (err) {
+      setCrmProjects(previous);
+      pushNotification("Failed to delete CRM project.", "system");
       console.error("Error deleting CRM project:", err);
     }
   };
@@ -605,6 +698,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   const updateAiConfig = async (updates: Partial<AdminConfig['ai']>) => {
+    const previous = { ...config };
     const newAi = { 
       ...config.ai, 
       ...updates, 
@@ -612,17 +706,24 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     const newConfig = { ...config, ai: newAi };
     
-    // Update local state
-    setConfig(newConfig);
-    
-    // Persist to Supabase
-    await syncSettings({ config: newConfig });
-    
-    // Log activity
-    logActivity('update', 'ai_config', 'global', updates);
+    try {
+      // Update local state
+      setConfig(newConfig);
+      
+      // Persist to Supabase
+      await syncSettings({ config: newConfig });
+      
+      // Log activity
+      logActivity('update', 'ai_config', 'global', updates);
+    } catch (err) {
+      setConfig(previous);
+      pushNotification("Failed to update AI configuration.", "system");
+      console.error("Error updating AI Config:", err);
+    }
   };
 
   const reorderProjects = async (projectId: number, newIndex: number) => {
+    const previous = [...projects];
     setProjects(prev => {
       // Create new sorted array
       const sorted = [...prev].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
@@ -638,7 +739,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Background Sync to Supabase
       Promise.all(updated.map(p => supabase.from('projects').update({ displayOrder: p.displayOrder }).eq('id', p.id)))
         .then(() => logActivity('reorder', 'projects'))
-        .catch(err => console.error("Error syncing project reorder:", err));
+        .catch(err => {
+          setProjects(previous);
+          pushNotification("Failed to save project order.", "system");
+          console.error("Error syncing project reorder:", err);
+        });
         
       return updated;
     });
@@ -704,9 +809,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteMedia = async (assetId: string) => {
+    const previous = [...mediaAssets];
     try {
       const asset = mediaAssets.find(a => a.id === assetId);
       if (!asset) return;
+
+      // Optimistic delete from UI
+      setMediaAssets(prev => prev.filter(a => a.id !== assetId));
 
       if (asset.source === 'upload') {
         const { error: storageError } = await supabase.storage
@@ -722,9 +831,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (dbError) throw dbError;
 
-      setMediaAssets(prev => prev.filter(a => a.id !== assetId));
       logActivity('delete', 'media_asset', assetId, { filename: asset.filename });
     } catch (err) {
+      setMediaAssets(previous);
+      pushNotification("Failed to delete media asset.", "system");
       console.error("Delete Media Error:", err);
       throw err;
     }
