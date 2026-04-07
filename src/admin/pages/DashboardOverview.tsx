@@ -118,7 +118,7 @@ export const DashboardOverview = () => {
                     }`}>
                       {lead.status === 'pending' ? t[lang].newStatus : 
                        lead.status === 'in_progress' ? t[lang].progressStatus : 
-                       lead.status.replace('_', ' ')}
+                       (lead.status || '').replace('_', ' ')}
                     </span>
                   </td>
                   <td className={`px-4 py-4 text-xs font-mono ripple-effect ${isRtl ? 'text-left' : 'text-right'}`}>{lead.date}</td>

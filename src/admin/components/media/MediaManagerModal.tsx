@@ -119,8 +119,11 @@ export const MediaManagerModal = ({
       });
       setIsRegistering(false);
       setNewAssetData({ title: '', category: 'General', alt_text: '' });
-    } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } catch (error: unknown) {
+      console.error("Upload Error Details:", error);
+      const err = error as Record<string, unknown>;
+      const msg = err?.message || err?.error_description || (error instanceof Error ? error.message : JSON.stringify(error)) || 'Upload failed';
+      setUploadError(`Failed: ${msg}`);
     } finally {
       setIsUploading(false);
     }

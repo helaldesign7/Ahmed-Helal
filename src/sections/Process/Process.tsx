@@ -94,7 +94,7 @@ export const Process = ({ lang, id }: ProcessProps) => {
   const lineHeight = useTransform(scrollLineHeight, [0, 1], ["0%", "100%"]);
 
   return (
-    <section id={id} ref={containerRef} className="py-32 px-6 md:px-12 bg-transparent relative overflow-hidden">
+    <section id={id} ref={containerRef} style={{ position: 'relative' }} className="py-32 px-6 md:px-12 bg-transparent relative overflow-hidden">
        {/* Background Noise/Gradient */}
        <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-accent-violet/5 to-transparent pointer-events-none" />
 

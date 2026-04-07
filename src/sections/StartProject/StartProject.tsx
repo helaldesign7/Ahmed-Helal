@@ -66,11 +66,15 @@ export const StartProject = ({ lang }: StartProjectProps) => {
       await addLead(newLeadData);
 
       // 2. Trigger Email Notification (Netlify Function)
-      await fetch('/.netlify/functions/submit-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
-      });
+      try {
+        await fetch('/.netlify/functions/submit-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
+        });
+      } catch (emailErr) {
+        console.warn("Email warning (non-fatal):", emailErr);
+      }
 
       setIsSubmitting(false);
       setIsSuccess(true);

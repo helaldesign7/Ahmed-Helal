@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Home, HardDrive, Bell, Globe } from 'lucide-react';
 import { useState } from 'react';
@@ -11,12 +11,13 @@ export const AdminLayout = () => {
     notifications, 
     markNotificationAsRead, 
     clearNotifications,
-    isDirty,
+    hasUnsavedChanges,
     saveStatus,
-    saveChanges,
-    cancelChanges
+    saveWebsiteChanges,
+    resetWebsiteChanges
   } = useAdmin();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lang, setLang] = useState<'en' | 'ar'>(() => (localStorage.getItem('language') as 'en' | 'ar') || 'en');
   
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -171,7 +172,7 @@ export const AdminLayout = () => {
         </main>
 
         {/* Global Save/Draft Bar */}
-        {(isDirty || saveStatus !== 'idle') && (
+        {(!location.pathname.includes('/admin/crm') && !location.pathname.includes('/admin/leads') && !location.pathname.includes('/admin/workspace') && !location.pathname.includes('/admin/logs')) && (hasUnsavedChanges || saveStatus !== 'idle') && (
           <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-100 w-[90%] max-w-2xl bg-[#0F0F0F]/80 backdrop-blur-3xl border border-white/10 rounded-full p-2.5 shadow-[0_30px_100px_rgba(0,0,0,1)] flex items-center justify-between transition-all duration-500 animate-in slide-in-from-bottom-10 ${isRtl ? 'flex-row-reverse' : ''}`}>
              <div className={`flex items-center gap-4 px-6 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div className="w-2.5 h-2.5 rounded-full bg-accent-violet animate-pulse shadow-[0_0_12px_rgba(139,92,246,1)]" />
@@ -180,7 +181,7 @@ export const AdminLayout = () => {
 
              <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <button 
-                  onClick={cancelChanges}
+                  onClick={resetWebsiteChanges}
                   disabled={saveStatus === 'saving'}
                   className="px-6 py-2.5 rounded-full hover:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white transition-all disabled:opacity-30"
                 >
@@ -188,7 +189,7 @@ export const AdminLayout = () => {
                 </button>
                 
                 <button 
-                  onClick={saveChanges}
+                  onClick={saveWebsiteChanges}
                   disabled={saveStatus === 'saving'}
                   className={`px-10 py-3.5 rounded-full bg-accent-violet hover:bg-accent-violet/80 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed`}
                 >

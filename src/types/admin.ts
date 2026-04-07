@@ -245,6 +245,13 @@ export interface AdminConfig {
   };
 }
 
+export interface WebsiteState {
+  appearance: Appearance;
+  config: AdminConfig;
+  siteContent: Content;
+  sections: SectionBlueprint[];
+}
+
 export interface AdminContextType {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
@@ -287,10 +294,12 @@ export interface AdminContextType {
   updateSectionLabel: (id: SectionId, labels: { en: string; ar: string }) => void;
   
   // --- Draft System Control ---
-  isDirty: boolean;
+  websiteDraft: WebsiteState;
+  persistedWebsiteState: WebsiteState | null;
+  hasUnsavedChanges: boolean;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
-  saveChanges: () => Promise<void>;
-  cancelChanges: () => void;
+  saveWebsiteChanges: () => Promise<void>;
+  resetWebsiteChanges: () => void;
 
   // --- 5. System & Media State ---
   notifications: Notification[];

@@ -90,9 +90,9 @@ export const CRMLeads = () => {
     return leads
       .filter((lead: Lead) => {
         const matchesSearch = 
-          lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (lead.company?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+          (lead.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+          (lead.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+          (lead.company?.toLowerCase()?.includes(searchQuery.toLowerCase()) ?? false);
         
         const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
         
@@ -200,7 +200,7 @@ export const CRMLeads = () => {
                     </td>
                     <td className={`px-6 py-4 ${isRtl ? 'text-right' : ''} relative`}>
                       <select 
-                        value={lead.status}
+                        value={lead.status || ''}
                         onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as Lead['status'])}
                         className={`bg-black/50 border border-white/10 rounded-md px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-white focus:outline-none focus:border-accent-violet appearance-none cursor-pointer ${isRtl ? 'pl-8 pr-3' : 'pr-8 pl-3'}`}
                       >

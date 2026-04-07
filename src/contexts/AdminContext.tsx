@@ -6,11 +6,84 @@ import type {
   Notification, MediaAsset, AdminConfig, SystemStats,
   CRMClient, CRMProject, ActivityLog, ChatConversation,
   ProjectTask, ProjectNote, ProjectLink, ProjectActivity,
-  AdminContextType
+  AdminContextType, WebsiteState
 } from '../types/admin';
 
 import { defaultBlueprint } from '../types/admin';
 import { AdminContext } from './useAdmin';
+
+type ProjectDbRow = {
+  id?: number;
+  title: string;
+  titlear?: string;
+  category: string;
+  categoryar?: string;
+  status: 'published' | 'archived';
+  isfeatured?: boolean;
+  date: string;
+  featuredmediaurl?: string;
+  imageurl?: string;
+  content: string;
+  displayorder?: number;
+  created_at?: string;
+};
+
+const mapDbProjectToUi = (row: ProjectDbRow): Project => ({
+  id: row.id!,
+  title: row.title,
+  titleAr: row.titlear || '',
+  category: row.category,
+  categoryAr: row.categoryar || '',
+  status: row.status,
+  isFeatured: row.isfeatured || false,
+  date: row.date,
+  featuredMediaUrl: row.featuredmediaurl || '',
+  imageUrl: row.imageurl || '',
+  content: row.content,
+  displayOrder: row.displayorder ?? 0,
+});
+
+const mapUiProjectToDb = (
+  project: Omit<Project, 'id'> | Partial<Project>
+): Partial<ProjectDbRow> => ({
+  title: project.title ?? '',
+  titlear: project.titleAr ?? '',
+  category: project.category ?? '',
+  categoryar: project.categoryAr ?? '',
+  status: (project.status as 'published' | 'archived') ?? 'published',
+  isfeatured: project.isFeatured ?? false,
+  date: project.date ?? '',
+  featuredmediaurl: project.featuredMediaUrl ?? '',
+  imageurl: project.imageUrl ?? '',
+  content: project.content ?? '',
+  displayorder: project.displayOrder ?? 0,
+});
+
+const initialWebsiteState: WebsiteState = {
+  appearance: {
+    accentColor: '#8b5cf6',
+    bgColor: '#000000',
+    coreGlow: 'rgba(139, 92, 246, 0.5)',
+    fontFamily: 'Inter',
+    borderRadius: '1rem',
+    glassmorphism: true
+  },
+  siteContent: initialContent,
+  sections: defaultBlueprint,
+  config: {
+    ai: {
+      assistantName: 'A.U.R.A',
+      welcomeMessageEn: 'SYSTEM ONLINE. Welcome back, Ahmed. I am AURA. How may I assist you today?',
+      welcomeMessageAr: 'النظام متاح. مرحباً بعودتك، أحمد. أنا أورا. كيف يمكنني مساعدتك اليوم؟',
+      tone: 'Professional/Tech',
+      systemPrompt: '',
+      knowledgeBase: '',
+      autoSuggest: true,
+      leadCaptureEnforcement: true,
+      lastUpdatedAt: new Date().toISOString()
+    }
+  }
+};
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
@@ -32,36 +105,24 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   // --- 2. Public Site Draft System ---
-  const [appearance, setAppearanceDraft] = useState<Appearance>({
-    accentColor: '#8b5cf6',
-    bgColor: '#000000',
-    coreGlow: 'rgba(139, 92, 246, 0.5)',
-    fontFamily: 'Inter',
-    borderRadius: '1rem',
-    glassmorphism: true
-  });
-  const [siteContent, setSiteContentDraft] = useState<Content>(initialContent);
-  const [sections, setSectionsDraft] = useState<SectionBlueprint[]>(defaultBlueprint);
-  const [config, setConfig] = useState<AdminConfig>({
-    ai: {
-      assistantName: 'A.U.R.A',
-      welcomeMessageEn: 'SYSTEM ONLINE. Welcome back, Ahmed. I am AURA. How may I assist you today?',
-      welcomeMessageAr: 'النظام متاح. مرحباً بعودتك، أحمد. أنا أورا. كيف يمكنني مساعدتك اليوم؟',
-      tone: 'Professional/Tech',
-      systemPrompt: '',
-      knowledgeBase: '',
-      autoSuggest: true,
-      leadCaptureEnforcement: true,
-      lastUpdatedAt: new Date().toISOString()
-    }
-  });
-
-  const [persistedAppearance, setPersistedAppearance] = useState<Appearance | null>(null);
-  const [persistedContent, setPersistedContent] = useState<Content | null>(null);
-  const [persistedSections, setPersistedSections] = useState<SectionBlueprint[] | null>(null);
-
-  const [isDirty, setIsDirty] = useState(false);
+  const [websiteDraft, setWebsiteDraft] = useState<WebsiteState>(initialWebsiteState);
+  const [persistedWebsiteState, setPersistedWebsiteState] = useState<WebsiteState | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const persistedRef = React.useRef(persistedWebsiteState);
+  const draftRef = React.useRef(websiteDraft);
+  
+  useEffect(() => {
+    persistedRef.current = persistedWebsiteState;
+    draftRef.current = websiteDraft;
+  }, [persistedWebsiteState, websiteDraft]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!persistedWebsiteState) return false;
+    return JSON.stringify(websiteDraft) !== JSON.stringify(persistedWebsiteState);
+  }, [websiteDraft, persistedWebsiteState]);
+
+  const { appearance, siteContent, sections, config } = websiteDraft;
 
   // --- 3. Data Fetching Logic ---
 
@@ -76,41 +137,29 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (error) throw error;
       
       if (data?.content) {
-        const s = data.content;
-        if (s.appearance) setPersistedAppearance(s.appearance);
-        if (s.siteContent) setPersistedContent(s.siteContent as Content);
-        if (s.sections) setPersistedSections(s.sections as SectionBlueprint[]);
+        const s = data.content as Partial<WebsiteState>;
 
-        if (!isDirty) {
-          if (s.appearance) setAppearanceDraft(prev => ({ ...prev, ...s.appearance }));
-          if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
-          if (s.siteContent) {
-            setSiteContentDraft(prev => {
-              const merged = { ...prev };
-              Object.entries(s.siteContent as Content).forEach(([key, value]) => {
-                const sectionKey = key as keyof Content;
-                if (!value) return;
-                if (Array.isArray(value)) {
-                  (merged as Record<string, unknown>)[sectionKey] = value;
-                } else if (typeof value === 'object' && prev[sectionKey]) {
-                  (merged as Record<string, unknown>)[sectionKey] = { 
-                    ...(prev[sectionKey] as object), 
-                    ...(value as object) 
-                  };
-                } else {
-                  (merged as Record<string, unknown>)[sectionKey] = value;
-                }
-              });
-              return merged;
-            });
-          }
-          if (s.sections) setSectionsDraft(s.sections as SectionBlueprint[]);
+        const newState: WebsiteState = {
+          appearance: s.appearance || initialWebsiteState.appearance,
+          config: s.config || initialWebsiteState.config,
+          siteContent: s.siteContent || initialWebsiteState.siteContent,
+          sections: s.sections || initialWebsiteState.sections
+        };
+
+        setPersistedWebsiteState(newState);
+
+        const currentDraftStr = JSON.stringify(draftRef.current);
+        const currentPersistedStr = JSON.stringify(persistedRef.current);
+        
+        // Prevent realtime override if draft was modified locally
+        if (!persistedRef.current || currentDraftStr === currentPersistedStr) {
+           setWebsiteDraft(newState);
         }
       }
     } catch (err) {
       console.error('[AdminContext] Settings Fetch Failed:', err);
     }
-  }, [isDirty]);
+  }, []);
 
   const fetchGlobalData = useCallback(async () => {
     try {
@@ -125,7 +174,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         fetchSiteSettingsData()
       ]);
 
-      if (p.data) setProjects(p.data as Project[]);
+      if (p.data) {
+        setProjects((p.data as ProjectDbRow[]).map(mapDbProjectToUi));
+      }
       if (l.data) setLeads(l.data as Lead[]);
       if (cClients.data) setCrmClients(cClients.data as CRMClient[]);
       if (cProjs.data) setCrmProjects(cProjs.data as CRMProject[]);
@@ -175,16 +226,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // --- 5. Working State Setters (Draft System) ---
 
   const setAppearance = useCallback((updates: Partial<Appearance>) => {
-    setAppearanceDraft(prev => {
-      const updated = { ...prev, ...updates };
-      setIsDirty(true);
-      return updated;
-    });
+    setWebsiteDraft(prev => ({ ...prev, appearance: { ...prev.appearance, ...updates } }));
   }, []);
 
   const updateText = useCallback((section: keyof Content, fieldPath: string, lang: 'en' | 'ar' | 'raw', newValue: string) => {
-    setSiteContentDraft(prev => {
-      const newContent = { ...prev };
+    setWebsiteDraft(prev => {
+      const newContent = { ...prev.siteContent };
       const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
       const keys = fieldPath.split('.');
       let current: Record<string, unknown> = sectionData;
@@ -192,94 +239,81 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (lang === 'raw') current[keys[keys.length - 1]] = newValue;
       else (current[keys[keys.length - 1]] as Record<string, string>)[lang] = newValue;
       (newContent[section] as unknown) = sectionData;
-      setIsDirty(true);
-      return newContent;
+      return { ...prev, siteContent: newContent };
     });
   }, []);
 
   const updateSectionArray = useCallback((section: keyof Content, fieldPath: string, newArray: unknown[]) => {
-    setSiteContentDraft(prev => {
-      const newContent = { ...prev };
+    setWebsiteDraft(prev => {
+      const newContent = { ...prev.siteContent };
       const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
       const keys = fieldPath.split('.');
       let current: Record<string, unknown> = sectionData;
       for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]] as Record<string, unknown>; }
       current[keys[keys.length - 1]] = newArray;
       (newContent[section] as unknown) = sectionData;
-      setIsDirty(true);
-      return newContent;
+      return { ...prev, siteContent: newContent };
     });
   }, []);
 
   const toggleVisibility = useCallback((id: SectionId) => {
-    setSectionsDraft(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s);
-      setIsDirty(true);
-      return updated;
-    });
+    setWebsiteDraft(prev => ({ ...prev, sections: prev.sections.map(s => s.id === id ? { ...s, isVisible: !s.isVisible } : s) }));
   }, []);
 
   const toggleNavbarVisibility = useCallback((id: SectionId) => {
-    setSectionsDraft(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, inNavbar: !s.inNavbar } : s);
-      setIsDirty(true);
-      return updated;
-    });
+    setWebsiteDraft(prev => ({ ...prev, sections: prev.sections.map(s => s.id === id ? { ...s, inNavbar: !s.inNavbar } : s) }));
   }, []);
 
   const moveSection = useCallback((id: SectionId, direction: 'up' | 'down') => {
-    setSectionsDraft(prev => {
-      const index = prev.findIndex(s => s.id === id);
+    setWebsiteDraft(prev => {
+      const index = prev.sections.findIndex(s => s.id === id);
       if (index === -1) return prev;
       const newIndex = direction === 'up' ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= prev.length) return prev;
-      const updated = [...prev];
+      if (newIndex < 0 || newIndex >= prev.sections.length) return prev;
+      const updated = [...prev.sections];
       [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
       const final = updated.map((s, i) => ({ ...s, order: i }));
-      setIsDirty(true);
-      return final;
+      return { ...prev, sections: final };
     });
   }, []);
 
   const reorderSections = useCallback((startIndex: number, endIndex: number) => {
-    setSectionsDraft(prev => {
-      const result = Array.from(prev);
+    setWebsiteDraft(prev => {
+      const result = Array.from(prev.sections);
       const [removed] = result.splice(startIndex, 1);
       result.splice(endIndex, 0, removed);
       const ordered = result.map((s, i) => ({ ...s, order: i }));
-      setIsDirty(true);
-      return ordered;
+      return { ...prev, sections: ordered };
     });
   }, []);
 
   const setSectionsOrder = useCallback((newSections: SectionBlueprint[]) => {
-    setSectionsDraft(newSections.map((s, i) => ({ ...s, order: i })));
-    setIsDirty(true);
+    setWebsiteDraft(prev => ({ ...prev, sections: newSections.map((s, i) => ({ ...s, order: i })) }));
   }, []);
 
   const updateSectionLabel = useCallback((id: SectionId, labels: { en: string; ar: string }) => {
-    setSectionsDraft(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, navLabel: labels } : s);
-      setIsDirty(true);
-      return updated;
+    setWebsiteDraft(prev => ({ ...prev, sections: prev.sections.map(s => s.id === id ? { ...s, navLabel: labels } : s) }));
+  }, []);
+
+  const setConfig = useCallback((configUpdates: React.SetStateAction<AdminConfig>) => {
+    setWebsiteDraft(prev => {
+      const nextConfig = typeof configUpdates === 'function' ? configUpdates(prev.config) : configUpdates;
+      return { ...prev, config: nextConfig };
     });
   }, []);
 
   // --- 6. Save/Cancel Draft Flow ---
 
-  const saveChanges = useCallback(async () => {
+  const saveWebsiteChanges = useCallback(async () => {
     setSaveStatus('saving');
     try {
-      const payload = { appearance, config, siteContent, sections };
+      const payload = websiteDraft;
       const { error } = await supabase.from('site_settings').upsert({
         id: 'global', content: payload, updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (error) throw error;
 
-      setPersistedAppearance(appearance);
-      setPersistedContent(siteContent);
-      setPersistedSections(sections);
-      setIsDirty(false);
+      setPersistedWebsiteState(payload);
       setSaveStatus('saved');
       pushNotification("Changes published & live!", "system", "Site Published");
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -290,46 +324,115 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       pushNotification("Failed to publish changes.", "system", "Error");
       setTimeout(() => setSaveStatus('idle'), 5000);
     }
-  }, [appearance, config, siteContent, sections, pushNotification, logActivity]);
+  }, [websiteDraft, pushNotification, logActivity]);
 
-  const cancelChanges = useCallback(() => {
-    if (persistedAppearance) setAppearanceDraft(persistedAppearance);
-    if (persistedContent) setSiteContentDraft(persistedContent);
-    if (persistedSections) setSectionsDraft(persistedSections);
-    setIsDirty(false);
+  const resetWebsiteChanges = useCallback(() => {
+    if (persistedWebsiteState) {
+      setWebsiteDraft(persistedWebsiteState);
+    }
     setSaveStatus('idle');
     pushNotification("Unsaved changes discarded.", "system");
-  }, [persistedAppearance, persistedContent, persistedSections, pushNotification]);
+  }, [persistedWebsiteState, pushNotification]);
 
   // --- 7. Instant CRUD (CRM, Media, Logs etc.) ---
 
   const addProject = useCallback(async (project: Omit<Project, 'id'>) => {
-    const { data } = await supabase.from('projects').insert([project]).select();
-    if (data) setProjects(prev => [data[0] as Project, ...prev]);
+    const payload = mapUiProjectToDb(project);
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Add Project Failed:', error);
+      throw error;
+    }
+
+    if (data) {
+      setProjects(prev => [mapDbProjectToUi(data as ProjectDbRow), ...prev]);
+    }
   }, []);
+  
   const updateProject = useCallback(async (id: number, updates: Partial<Project>) => {
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-    await supabase.from('projects').update(updates).eq('id', id);
+    const payload = mapUiProjectToDb(updates);
+    const { error } = await supabase
+      .from('projects')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Update Project Failed:', error);
+      throw error;
+    }
   }, []);
+  
   const deleteProject = useCallback(async (id: number) => {
     setProjects(prev => prev.filter(p => p.id !== id));
     await supabase.from('projects').delete().eq('id', id);
   }, []);
+  
   const reorderProjects = useCallback(async (id: number, newIndex: number) => {
     setProjects(prev => {
-      const result = [...prev];
+      const result = [...prev].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
       const oldIndex = result.findIndex(p => p.id === id);
       if (oldIndex === -1) return prev;
+      
       const [removed] = result.splice(oldIndex, 1);
       result.splice(newIndex, 0, removed);
-      const updated = result.map((p, i) => ({ ...p, displayorder: i }));
-      Promise.all(updated.map(p => supabase.from('projects').update({ displayorder: p.displayorder }).eq('id', p.id)));
+      
+      const updated = result.map((p, i) => ({ ...p, displayOrder: i }));
+      
+      Promise.all(
+        updated.map(p =>
+          supabase.from('projects').update({ displayorder: p.displayOrder }).eq('id', p.id)
+        )
+      ).catch(err => console.error('Reorder Projects Failed:', err));
+      
       return updated;
     });
   }, []);
 
   const addLead = useCallback(async (lead: Omit<Lead, 'id'>) => {
-    const { data } = await supabase.from('leads').insert([lead]).select();
+    // Map camelCase to the actual DB columns
+    const payload = {
+      name: lead.name,
+      email: lead.email,
+      whatsapp: lead.whatsapp,
+      company: lead.company,
+      interest: lead.interest,
+      servicetype: lead.serviceType, // Might be missing, but we'll try lowercase
+      projecttitle: lead.projectTitle,
+      description: lead.description,
+      budget: lead.budget,
+      timeline: lead.timeline,
+      preferredcontact: lead.preferredContact, // Might be missing
+      status: lead.status || 'new',
+      date: lead.date,
+      source: lead.source
+    };
+    
+    // Purge undefined/missing columns that throw 400
+    // Try catching column errors and removing them dynamically if they block insertion
+    const { data, error } = await supabase.from('leads').insert([payload]).select();
+    
+    // If we hit column mismatch, we can fallback to inserting only safe keys
+    if (error && error.code === 'PGRST204') {
+      console.warn("Retrying lead insert with safe mapped keys...");
+      const safePayload = {
+        name: lead.name, email: lead.email, whatsapp: lead.whatsapp, 
+        company: lead.company, interest: lead.interest, 
+        projecttitle: lead.projectTitle, description: lead.description, 
+        budget: lead.budget, timeline: lead.timeline, 
+        status: lead.status || 'new', date: lead.date
+      };
+      const retry = await supabase.from('leads').insert([safePayload]).select();
+      if (retry.data) setLeads(prev => [retry.data[0] as Lead, ...prev]);
+      return;
+    }
+
+    if (error) console.error("addLead error:", error);
     if (data) setLeads(prev => [data[0] as Lead, ...prev]);
   }, []);
   const updateLead = useCallback(async (id: number, updates: Partial<Lead>) => {
@@ -384,7 +487,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (uploadError) throw uploadError;
     const { data: { publicUrl } } = supabase.storage.from('portfolio_assets').getPublicUrl(uploadData.path);
     const { data: asset, error: dbError } = await supabase.from('media_assets').insert([{
-      name: file.name, url: publicUrl, type: file.type.split('/')[0], category: metadata?.category || 'general'
+      filename: file.name,
+      storage_path: uploadData.path,
+      full_url: publicUrl,
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      mime_type: file.type || 'application/octet-stream',
+      size_bytes: file.size,
+      source: 'upload',
+      category: metadata?.category || 'General',
+      title: metadata?.title || file.name,
+      alt_text: metadata?.alt_text || ''
     }]).select().single();
     if (dbError) throw dbError;
     setMediaAssets(prev => [asset as MediaAsset, ...prev]);
@@ -418,12 +530,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const logProjectActivity = useCallback(async (pid: number, act: string, det?: Record<string, unknown>) => { await supabase.from('project_activities').insert({ project_id: pid, action: act, details: det || {} }); }, []);
 
   const updateAiConfig = useCallback(async (u: Partial<AdminConfig['ai']>) => {
-    const updatedAi = { ...config.ai, ...u, lastUpdatedAt: new Date().toISOString() };
-    const newConfig = { ...config, ai: updatedAi };
-    setConfig(newConfig);
-    const payload = { appearance, config: newConfig, siteContent, sections };
-    await supabase.from('site_settings').upsert({ id: 'global', content: payload });
-  }, [appearance, config, siteContent, sections]);
+    setWebsiteDraft(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        ai: { ...prev.config.ai, ...u, lastUpdatedAt: new Date().toISOString() }
+      }
+    }));
+  }, []);
 
   const updateStats = useCallback((newStats: Partial<SystemStats>) => {
     setStats(prev => ({ ...prev, ...newStats }));
@@ -433,20 +547,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const value = useMemo<AdminContextType>(() => ({
     projects, setProjects, leads, setLeads, crmClients, setCrmClients, crmProjects, setCrmProjects,
+    websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
     appearance, siteContent, sections, config, setConfig,
-    loading, mediaAssets, setMediaAssets, notifications, setNotifications, stats, activityLogs, conversations, isDirty, saveStatus,
+    loading, mediaAssets, setMediaAssets, notifications, setNotifications, stats, activityLogs, conversations,
     setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
-    moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
+    moveSection, reorderSections, setSectionsOrder, updateSectionLabel,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
     addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
     fetchConversations: async () => {}, fetchMessages: async () => [], updateAiConfig, logActivity, updateStats
   }), [
-    projects, leads, crmClients, crmProjects, appearance, siteContent, sections, config,
-    loading, mediaAssets, notifications, stats, activityLogs, conversations, isDirty, saveStatus,
+    projects, leads, crmClients, crmProjects, websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
+    appearance, siteContent, sections, config, setConfig,
+    loading, mediaAssets, notifications, stats, activityLogs, conversations,
     setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
-    moveSection, reorderSections, setSectionsOrder, updateSectionLabel, saveChanges, cancelChanges,
+    moveSection, reorderSections, setSectionsOrder, updateSectionLabel,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,

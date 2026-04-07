@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SortableProjectRow = ({ project, lang, t, isRtl, handleEdit, handleArchive, handleDelete }: { project: Project, lang: string, t: any, isRtl: boolean, handleEdit: (p: Project) => void, handleArchive: (id: number, status: 'published'|'archived') => void, handleDelete: (id: number) => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
 
@@ -270,18 +271,18 @@ export const ProjectsManager = () => {
 
         {/* List */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-white/60">
-            <thead className="text-[10px] font-mono uppercase tracking-widest text-white/30 bg-black/40">
-              <tr className={isRtl ? 'flex-row-reverse items-center' : ''}>
-                <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.name}</th>
-                <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.category}</th>
-                <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.status}</th>
-                <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.modified}</th>
-                <th className={`px-6 py-4 font-medium ${isRtl ? 'text-left' : 'text-right'}`}>{t[lang].table.actions}</th>
-              </tr>
-            </thead>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={filteredProjects.map((p: Project) => p.id)} strategy={verticalListSortingStrategy}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={filteredProjects.map((p: Project) => p.id)} strategy={verticalListSortingStrategy}>
+              <table className="w-full text-sm text-white/60">
+                <thead className="text-[10px] font-mono uppercase tracking-widest text-white/30 bg-black/40">
+                  <tr className={isRtl ? 'flex-row-reverse items-center' : ''}>
+                    <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.name}</th>
+                    <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.category}</th>
+                    <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.status}</th>
+                    <th className={`px-6 py-4 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>{t[lang].table.modified}</th>
+                    <th className={`px-6 py-4 font-medium ${isRtl ? 'text-left' : 'text-right'}`}>{t[lang].table.actions}</th>
+                  </tr>
+                </thead>
                 <tbody className="bg-transparent">
                   {filteredProjects.map((project: Project) => (
                     <SortableProjectRow 
@@ -296,9 +297,9 @@ export const ProjectsManager = () => {
                     />
                   ))}
                 </tbody>
-              </SortableContext>
-             </DndContext>
-          </table>
+              </table>
+            </SortableContext>
+          </DndContext>
         </div>
         
         {/* Footer */}

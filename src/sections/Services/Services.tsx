@@ -43,6 +43,7 @@ const ServiceCard = ({
         opacity: opacityValue,
         scale: scaleValue,
         filter: useTransform(blurValue, (v) => `blur(${v}px)`),
+        position: 'relative'
       }}
       className="relative w-full max-w-5xl mb-32 last:mb-0 group cursor-default"
     >

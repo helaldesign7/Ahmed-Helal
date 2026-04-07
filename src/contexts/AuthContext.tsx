@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { type Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -33,6 +34,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  useEffect(() => {
+    const adminEmail = 'helal.design7@gmail.com';
+
+    const applySession = (session: Session | null) => {
+      const sbUser = session?.user;
+
+      if (sbUser?.email?.toLowerCase() === adminEmail) {
+        const adminUser: User = {
+          id: sbUser.id,
+          email: adminEmail,
+          role: 'super_admin',
+          name: sbUser.user_metadata?.full_name || 'Ahmed Helal'
+        };
+        setUser(adminUser);
+        localStorage.setItem('portfolio_session', JSON.stringify(adminUser));
+        return;
+      }
+
+      const localStr = localStorage.getItem('portfolio_session');
+      if (localStr) {
+        try {
+          const localUser = JSON.parse(localStr);
+          if (localUser?.role === 'admin' || localUser?.role === 'super_admin') {
+             if (!sbUser || sbUser.email?.toLowerCase() !== adminEmail) {
+                setUser(null);
+                localStorage.removeItem('portfolio_session');
+             }
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session);
+    });
+
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
   const clearChats = () => {
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('portfolio_chat_')) {
@@ -42,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail = email?.trim().toLowerCase() || '';
     
     // 1. Sync with Supabase Auth for RLS / Backend Security
     // This provides the JWT needed for the backend to recognize the user as authenticated
@@ -74,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 3. Check Local Users (Persistent Mock Database)
     const storedUsers: StoredUser[] = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
-    const matchedUser = storedUsers.find((u) => u.email.toLowerCase() === trimmedEmail && u.password === password);
+    const matchedUser = storedUsers.find((u) => u.email?.toLowerCase() === trimmedEmail && u.password === password);
 
     if (matchedUser) {
       const sessionUser: User = {
@@ -93,11 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = (name: string, email: string, password: string) => {
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail = email?.trim().toLowerCase() || '';
     const storedUsers: StoredUser[] = JSON.parse(localStorage.getItem('portfolio_users') || '[]');
 
     // Check if user already exists
-    if (storedUsers.some((u) => u.email.toLowerCase() === trimmedEmail)) {
+    if (storedUsers.some((u) => u.email?.toLowerCase() === trimmedEmail)) {
       return { success: false, error: 'Email already registered.' };
     }
 

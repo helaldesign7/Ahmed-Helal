@@ -2,19 +2,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@700;800;900&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --font-heading: "Outfit", sans-serif;
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "Space Mono", monospace;
-  
-  /* Primary Font: Vazirmatn (User Requested) */
-  --font-arabic: "Vazirmatn", sans-serif;
-
-  /* Dynamic Theme Colors - Linked to Admin Dashboard */
+@theme {
   --color-primary-black: var(--bg-black, #050505);
   --color-accent-violet: var(--accent-violet, #8b5cf6);
   --color-accent-blue: var(--accent-blue, #3b82f6);
   --color-gh-dark: #0d1117;
+  --font-heading: "Outfit", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "Space Mono", monospace;
+  --font-arabic: "Vazirmatn", sans-serif;
+}
+
+:root {
+  /* Dynamic Theme Colors - Linked to Admin Dashboard */
+  --bg-black: #050505;
+  --accent-violet: #8b5cf6;
+  --accent-blue: #3b82f6;
 
   /* Dynamic Effects */
   --accent-glow: rgba(var(--accent-rgb), 0.3);

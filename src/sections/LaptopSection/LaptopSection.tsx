@@ -74,6 +74,7 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
   return (
     <section 
       ref={sectionRef}
+      style={{ position: 'relative' }}
       className="relative min-h-[120vh] bg-primary-black py-20 flex flex-col items-center justify-center -mt-20 md:-mt-32 overflow-hidden"
     >
        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1800px] h-[1800px] bg-accent-violet/3 rounded-full blur-[350px] pointer-events-none" />

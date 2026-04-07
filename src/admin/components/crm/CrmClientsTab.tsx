@@ -50,11 +50,16 @@ export const CrmClientsTab = () => {
   });
 
   const filteredClients = useMemo(() => {
-    return crmClients.filter(c => 
-      c.name.toLowerCase().includes(search.toLowerCase()) || 
-      c.brand_company.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-    );
+    return crmClients.filter(c => {
+      let matchesSearch = true;
+      if (search) {
+        matchesSearch = 
+          (c.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
+          (c.brand_company?.toLowerCase() || '').includes(search.toLowerCase()) ||
+          (c.email?.toLowerCase() || '').includes(search.toLowerCase());
+      }
+      return matchesSearch;
+    });
   }, [crmClients, search]);
 
   const handleSave = async () => {

@@ -42,8 +42,8 @@ export const ProfileDropdown = ({ lang }: ProfileDropdownProps) => {
   };
 
   const userProjects = useMemo(() => {
-    if (!user) return [];
-    return leads.filter(lead => lead.email.toLowerCase() === user.email.toLowerCase());
+    if (!user?.email) return [];
+    return leads.filter(lead => lead.email?.toLowerCase() === user.email.toLowerCase());
   }, [leads, user]);
 
   const recentChats = useMemo(() => {
