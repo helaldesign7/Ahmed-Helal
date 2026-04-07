@@ -1,4 +1,4 @@
-import { Search, MoreVertical, CheckCircle, Eye, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, CheckCircle, Eye, Trash2, MessageSquare } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { CrmClientsTab } from '../components/crm/CrmClientsTab';
 import { CrmProjectsTab } from '../components/crm/CrmProjectsTab';
@@ -83,6 +83,20 @@ export const CRMLeads = () => {
         options: 'خيارات'
       },
       private: 'جهة خاصة'
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
     }
   };
 
@@ -210,7 +224,7 @@ export const CRMLeads = () => {
                         <option value="not_completed">❌ {t[lang].statuses.not_completed}</option>
                       </select>
                     </td>
-                    <td className={`px-6 py-4 text-xs font-mono ${isRtl ? 'text-right' : ''}`}>{lead.date}</td>
+                    <td className={`px-6 py-4 text-[10px] font-mono ${isRtl ? 'text-right' : ''}`}>{formatDate(lead.date)}</td>
                     <td className={`px-6 py-4 text-right`}>
                       <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isRtl ? 'justify-start' : 'justify-end'}`}>
                         <button 
@@ -220,6 +234,18 @@ export const CRMLeads = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {lead.session_id && (
+                          <button 
+                            className="p-2 hover:bg-accent-violet/10 rounded-lg transition-colors text-accent-violet border border-accent-violet/10" 
+                            title={lang === 'ar' ? 'عرض المحادثة' : 'View AI Chat'}
+                            onClick={() => {
+                              // Logic to navigate or open chat viewer
+                              window.location.hash = `#/admin/ai-assistant?session=${lead.session_id}`;
+                            }}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleUpdateLeadStatus(lead.id, 'completed')}
                           className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-green-400" 

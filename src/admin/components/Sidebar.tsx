@@ -11,6 +11,7 @@ import {
   HardDrive
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAdmin } from '../../contexts/useAdmin';
 
 
 
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ lang }: SidebarProps) => {
   const { logout, user } = useAuth();
+  const { conversations } = useAdmin();
   const navigate = useNavigate();
 
   const isRtl = lang === 'ar';
@@ -104,6 +106,11 @@ export const Sidebar = ({ lang }: SidebarProps) => {
           >
             <item.icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
             <span className="text-xs font-black uppercase tracking-widest">{item.name}</span>
+            {item.path === '/admin/ai' && conversations.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full bg-accent-violet text-[8px] font-mono text-white ml-auto animate-pulse ${isRtl ? 'mr-auto ml-0' : 'ml-auto'}`}>
+                {conversations.length}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

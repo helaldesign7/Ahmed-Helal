@@ -33,6 +33,7 @@ export interface Lead {
   status: 'pending' | 'in_progress' | 'completed' | 'not_completed';
   date: string;
   source: string;
+  session_id?: string;
 }
 
 export interface CRMClient {

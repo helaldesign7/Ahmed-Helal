@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { 
   Project, Lead, Appearance, SectionId, SectionBlueprint,
   Notification, MediaAsset, AdminConfig, SystemStats,
-  CRMClient, CRMProject, ActivityLog, ChatConversation,
+  CRMClient, CRMProject, ActivityLog, ChatConversation, ChatMessage,
   ProjectTask, ProjectNote, ProjectLink, ProjectActivity,
   AdminContextType, WebsiteState
 } from '../types/admin';
@@ -72,12 +72,12 @@ const initialWebsiteState: WebsiteState = {
   sections: defaultBlueprint,
   config: {
     ai: {
-      assistantName: 'A.U.R.A',
-      welcomeMessageEn: 'SYSTEM ONLINE. Welcome back, Ahmed. I am AURA. How may I assist you today?',
-      welcomeMessageAr: 'النظام متاح. مرحباً بعودتك، أحمد. أنا أورا. كيف يمكنني مساعدتك اليوم؟',
-      tone: 'Professional/Tech',
-      systemPrompt: '',
-      knowledgeBase: '',
+      assistantName: 'Ahmed\'s Assistant',
+      welcomeMessageEn: 'Hey! I\'m Ahmed\'s digital architect. Ready to turn your vision into a cinematic reality? How can I help you today?',
+      welcomeMessageAr: 'أهلاً بك! أنا مساعد المبدع أحمد هلال. هل أنت مستعد لتحويل رؤيتك إلى واقع سينمائي مبهر؟ كيف يمكنني مساعدتك اليوم؟',
+      tone: 'Creative / Dynamic',
+      systemPrompt: 'You are the official AI representative for Ahmed Helal. Your mission is to showcase Ahmed as a top-tier visual designer and convert visitors into clients. Be spontaneous, engaging, and always suggest WhatsApp for deeper discussions.',
+      knowledgeBase: 'Ahmed Helal is a multidisciplinary designer specializing in Cinematic UI, 3D Web Experiences, and Branding. He works with global brands and sports clubs like Al Ahly SC.',
       autoSuggest: true,
       leadCaptureEnforcement: true,
       lastUpdatedAt: new Date().toISOString()
@@ -95,7 +95,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [conversations] = useState<ChatConversation[]>([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SystemStats>({
     visits: 2450,
@@ -161,6 +161,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const fetchConversations = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('chat_conversations')
+      .select('*')
+      .order('last_message_at', { ascending: false });
+    
+    if (error) {
+      console.error("fetchConversations error:", error);
+      return;
+    }
+    setConversations(data as ChatConversation[]);
+  }, []);
+
+  const fetchMessages = useCallback(async (conversationId: string) => {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error("fetchMessages error:", error);
+      return [];
+    }
+    return data as ChatMessage[];
+  }, []);
+
   const fetchGlobalData = useCallback(async () => {
     try {
       setLoading(true);
@@ -171,7 +198,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         supabase.from('crm_projects').select('*').order('created_at', { ascending: false }),
         supabase.from('media_assets').select('*').order('created_at', { ascending: false }),
         supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(50),
-        fetchSiteSettingsData()
+        fetchSiteSettingsData(),
+        fetchConversations()
       ]);
 
       if (p.data) {
@@ -185,7 +213,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setLoading(false);
     }
-  }, [fetchSiteSettingsData]);
+  }, [fetchSiteSettingsData, fetchConversations]);
 
   useEffect(() => {
     fetchGlobalData();
@@ -529,6 +557,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteLink = useCallback(async (id: string) => { await supabase.from('project_links').delete().eq('id', id); }, []);
   const logProjectActivity = useCallback(async (pid: number, act: string, det?: Record<string, unknown>) => { await supabase.from('project_activities').insert({ project_id: pid, action: act, details: det || {} }); }, []);
 
+  // --- 8. Context Provisioning ---
+
   const updateAiConfig = useCallback(async (u: Partial<AdminConfig['ai']>) => {
     setWebsiteDraft(prev => ({
       ...prev,
@@ -543,8 +573,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setStats(prev => ({ ...prev, ...newStats }));
   }, []);
 
-  // --- 8. Context Provisioning ---
-
   const value = useMemo<AdminContextType>(() => ({
     projects, setProjects, leads, setLeads, crmClients, setCrmClients, crmProjects, setCrmProjects,
     websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
@@ -556,7 +584,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
     addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
-    fetchConversations: async () => {}, fetchMessages: async () => [], updateAiConfig, logActivity, updateStats
+    fetchConversations, fetchMessages, updateAiConfig, logActivity, updateStats
   }), [
     projects, leads, crmClients, crmProjects, websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
     appearance, siteContent, sections, config, setConfig,
@@ -567,7 +595,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
     uploadMedia, deleteMedia, markNotificationAsRead, clearNotifications, fetchProjectData,
     addTask, updateTask, deleteTask, addNote, deleteNote, addLink, deleteLink, logProjectActivity,
-    updateAiConfig, logActivity, updateStats
+    fetchConversations, fetchMessages, updateAiConfig, logActivity, updateStats
   ]);
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

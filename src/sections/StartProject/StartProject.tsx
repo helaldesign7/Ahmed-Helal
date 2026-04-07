@@ -13,7 +13,7 @@ interface StartProjectProps {
 }
 
 export const StartProject = ({ lang }: StartProjectProps) => {
-  const { siteContent, addLead } = useAdmin();
+  const { siteContent } = useAdmin();
   const content = siteContent.startProject;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -38,57 +38,39 @@ export const StartProject = ({ lang }: StartProjectProps) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
     try {
-      // 1. Save to Cloud (Supabase) via AdminContext
-      const newLeadData = {
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        whatsapp: formData.whatsapp.trim(),
-        company: formData.company.trim() || 'Individual',
-        interest: formData.serviceType,
-        serviceType: formData.serviceType,
-        projectTitle: formData.projectTitle.trim() || 'New Project Inquiry',
-        description: formData.description.trim(),
-        budget: formData.budget,
-        timeline: formData.timeline,
-        preferredContact: formData.preferredContact,
-        qualifiers: {
-          hasIdentity: formData.hasIdentity,
-          workType: formData.workType
-        },
-        status: 'pending' as const,
-        date: new Date().toISOString(),
-        source: isLocal ? 'Form (Local Sync)' : 'Form (Cloud Sync)'
-      };
+      const guestSessionId = localStorage.getItem('aura_guest_session_id') || '';
+      
+      const response = await fetch('/.netlify/functions/submit-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...formData, 
+          session_id: guestSessionId,
+          timestamp: new Date().toISOString() 
+        }),
+      });
 
-      await addLead(newLeadData);
+      const result = await response.json();
 
-      // 2. Trigger Email Notification (Netlify Function)
-      try {
-        await fetch('/.netlify/functions/submit-lead', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, timestamp: new Date().toISOString() }),
-        });
-      } catch (emailErr) {
-        console.warn("Email warning (non-fatal):", emailErr);
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Backend processing failed');
       }
 
+      // Backend database save is confirmed
       setIsSubmitting(false);
       setIsSuccess(true);
+      
+      if (!result.emailSent) {
+        console.warn('Lead captured perfectly, but email delivery was delayed.');
+      }
       
       setTimeout(() => {
         sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
+
     } catch (error: unknown) {
       setIsSubmitting(false);
-      if (isLocal) {
-        console.warn("DEV_FALLBACK: Capturing local submission despite error");
-        setIsSuccess(true);
-        return;
-      }
       const errorMsg = error instanceof Error ? error.message : 'Unknown sync error';
       alert(`TRANSMISSION ERROR: ${errorMsg}`);
     }
