@@ -20,6 +20,11 @@ export interface Content {
     description: { en: string; ar: string };
     intro: { en: string; ar: string };
     location: { en: string; ar: string };
+    profileImage: string;
+    portfolioUrl: string;
+    cvUrl: string;
+    screenBackgroundColor: string;
+    screenBackgroundImage?: string;
     ctas: {
       portfolio: { en: string; ar: string };
       cv: { en: string; ar: string };
@@ -135,6 +140,11 @@ export const content: Content = {
       ar: "مساحة راقية للاكتشاف الإبداعي."
     },
     location: { en: "Cairo, Egypt", ar: "القاهرة، مصر" },
+    profileImage: "https://drive.google.com/thumbnail?id=17qG2FN1G6Qf14UYZmm_i1VhqRVQbsdK0&sz=w1000",
+    portfolioUrl: "https://drive.google.com/file/d/18aE8ZHMtayUz8leq0s25YE9gPxXgCRiS/preview",
+    cvUrl: "https://drive.google.com/file/d/1TkqQ73kCRD64WRCGDJdSZkOgBA0t0vTJ/preview",
+    screenBackgroundColor: "rgba(139, 92, 246, 0.1)",
+    screenBackgroundImage: "",
     intro: {
       en: "Specializing in high-impact visual ecosystems and branding for global brands & sports clubs.",
       ar: "متخصص في بناء الأنظمة البصرية عالية التأثير للشركات العالمية والأندية الرياضية."

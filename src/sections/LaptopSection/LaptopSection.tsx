@@ -67,9 +67,11 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
   const laptopRotateX = useTransform(scrollYProgress, [0, 0.5, 1], [0, 0, 0]); // Neutralized for phone safety
   const laptopZ = useTransform(scrollYProgress, [0, 0.5, 1], [0, 0, 0]);
 
-  const profileImg = 'https://drive.google.com/thumbnail?id=17qG2FN1G6Qf14UYZmm_i1VhqRVQbsdK0&sz=w1000';
-  const portfolioUrl = 'https://drive.google.com/file/d/18aE8ZHMtayUz8leq0s25YE9gPxXgCRiS/preview';
-  const cvUrl = 'https://drive.google.com/file/d/1TkqQ73kCRD64WRCGDJdSZkOgBA0t0vTJ/preview';
+  const profileImg = laptop?.profileImage || 'https://drive.google.com/thumbnail?id=17qG2FN1G6Qf14UYZmm_i1VhqRVQbsdK0&sz=w1000';
+  const portfolioUrl = laptop?.portfolioUrl || 'https://drive.google.com/file/d/18aE8ZHMtayUz8leq0s25YE9gPxXgCRiS/preview';
+  const cvUrl = laptop?.cvUrl || 'https://drive.google.com/file/d/1TkqQ73kCRD64WRCGDJdSZkOgBA0t0vTJ/preview';
+  const screenBgColor = laptop?.screenBackgroundColor || 'rgba(139, 92, 246, 0.1)';
+  const screenBgImage = laptop?.screenBackgroundImage || '';
 
   return (
     <section 
@@ -118,7 +120,11 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
                     className="absolute inset-0 bg-[#080808] rounded-t-[20px] sm:rounded-t-[40px] overflow-hidden shadow-[0_-30px_100px_rgba(0,0,0,1)] border border-white/10 flex flex-col h-full"
                   >
                     <div className="absolute inset-0 z-0 pointer-events-none">
-                       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.1),transparent)]" />
+                       {screenBgImage ? (
+                         <img src={screenBgImage} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                       ) : (
+                         <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at top, ${screenBgColor}, transparent)` }} />
+                       )}
                     </div>
 
                     <div className="h-6 sm:h-10 w-full bg-black/90 border-b border-white/5 flex items-center px-4 sm:px-6 justify-between shrink-0 relative z-50">

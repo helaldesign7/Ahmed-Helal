@@ -134,6 +134,7 @@ export const DictionaryEditor = ({ sectionId }: { sectionId: string }) => {
   
   const contentKeyMap: Record<string, keyof Content> = {
     'hero': 'hero',
+    'laptop': 'laptop',
     'projects': 'featuredWork',
     'services': 'services',
     'process': 'process',

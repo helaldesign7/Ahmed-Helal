@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, MapPin, Clock, UserCircle, Bot, AlertTriangle, MessageSquare, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, MapPin, Clock, UserCircle, Bot, AlertTriangle, MessageSquare, ChevronLeft, ChevronRight, Loader2, ArrowDown } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { useAdmin } from '../../../contexts/useAdmin';
 import type { ChatMessage, ChatConversation } from '../../../types/admin';
@@ -11,6 +11,8 @@ export const ConversationViewer = () => {
   const [activeMessages, setActiveMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const chatFeedRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   
   const isRtl = lang === 'ar';
 
@@ -34,6 +36,21 @@ export const ConversationViewer = () => {
       loadMessages();
     }
   }, [activeSession, fetchMessages]);
+
+  useEffect(() => {
+    if (chatFeedRef.current) {
+      chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
+    }
+  }, [activeMessages]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 100);
+  };
+
+  const scrollToBottom = () => {
+    chatFeedRef.current?.scrollTo({ top: chatFeedRef.current.scrollHeight, behavior: 'smooth' });
+  };
 
   const filteredConversations = conversations.filter((c: ChatConversation) => 
     c.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -149,45 +166,61 @@ export const ConversationViewer = () => {
         </div>
 
         {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar bg-linear-to-b from-white/2 to-transparent">
-          {loadingMessages ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <Loader2 className="w-8 h-8 text-accent-violet animate-spin opacity-40" />
-              <p className="text-white/20 text-[10px] font-mono uppercase tracking-[0.2em]">Retaining Secure Logs...</p>
-            </div>
-          ) : activeMessages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-white/20">
-               <Bot className="w-12 h-12 mb-4 opacity-10" />
-               <p className="text-[10px] font-mono uppercase tracking-widest font-black">Select a secure session to view</p>
-            </div>
-          ) : (
-            activeMessages.map((msg, i) => (
-              <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-10 h-10 rounded-xl bg-accent-violet/20 border border-accent-violet/30 flex items-center justify-center shrink-0 shadow-lg shadow-accent-violet/5">
-                    <Bot className="w-5 h-5 text-accent-violet" />
-                  </div>
-                )}
-                
-                <div className={`max-w-[75%] rounded-3xl p-6 shadow-xl ${
-                  msg.role === 'user' 
-                    ? 'bg-accent-violet/10 text-white rounded-tr-md border border-accent-violet/20' 
-                    : 'bg-white/5 border border-white/10 text-white/80 rounded-tl-md'
-                }`}>
-                  <div className={`text-sm leading-relaxed font-mono whitespace-pre-wrap ${isRtl ? 'text-right' : ''}`}>{msg.content}</div>
-                  <div className={`text-[8px] font-mono uppercase tracking-[0.2em] mt-4 opacity-30 ${msg.role === 'user' ? (isRtl ? 'text-left' : 'text-right') : (isRtl ? 'text-right' : 'text-left')}`}>
-                    {new Date(msg.created_at).toLocaleTimeString()}
-                  </div>
-                </div>
-
-                {msg.role === 'user' && (
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                    <UserCircle className="w-5 h-5 text-white/40" />
-                  </div>
-                )}
+        <div className="flex-1 relative min-h-0">
+          <div 
+            ref={chatFeedRef}
+            onScroll={handleScroll}
+            className="absolute inset-0 overflow-y-auto p-8 space-y-10 custom-scrollbar bg-linear-to-b from-white/2 to-transparent scroll-smooth"
+          >
+            {loadingMessages ? (
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <Loader2 className="w-8 h-8 text-accent-violet animate-spin opacity-40" />
+                <p className="text-white/20 text-[10px] font-mono uppercase tracking-[0.2em]">Retaining Secure Logs...</p>
               </div>
-            ))
-          )}
+            ) : activeMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-white/20">
+                <Bot className="w-12 h-12 mb-4 opacity-10" />
+                <p className="text-[10px] font-mono uppercase tracking-widest font-black">Select a secure session to view</p>
+              </div>
+            ) : (
+              activeMessages.map((msg, i) => (
+                <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-10 h-10 rounded-xl bg-accent-violet/20 border border-accent-violet/30 flex items-center justify-center shrink-0 shadow-lg shadow-accent-violet/5">
+                      <Bot className="w-5 h-5 text-accent-violet" />
+                    </div>
+                  )}
+                  
+                  <div className={`max-w-[75%] rounded-3xl p-6 shadow-xl ${
+                    msg.role === 'user' 
+                      ? 'bg-accent-violet/10 text-white rounded-tr-md border border-accent-violet/20' 
+                      : 'bg-white/5 border border-white/10 text-white/80 rounded-tl-md'
+                  }`}>
+                    <div className={`text-sm leading-relaxed font-mono whitespace-pre-wrap ${isRtl ? 'text-right' : ''}`}>{msg.content}</div>
+                    <div className={`text-[8px] font-mono uppercase tracking-[0.2em] mt-4 opacity-30 ${msg.role === 'user' ? (isRtl ? 'text-left' : 'text-right') : (isRtl ? 'text-right' : 'text-left')}`}>
+                      {new Date(msg.created_at).toLocaleTimeString()}
+                    </div>
+                  </div>
+
+                  {msg.role === 'user' && (
+                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                      <UserCircle className="w-5 h-5 text-white/40" />
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            
+            {/* Scroll to bottom button */}
+            {showScrollBottom && (
+              <button 
+                onClick={scrollToBottom}
+                className="fixed bottom-12 right-12 w-10 h-10 bg-accent-violet text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all animate-bounce z-50"
+              >
+                <ArrowDown className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

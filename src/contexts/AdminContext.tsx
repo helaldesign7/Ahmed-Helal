@@ -215,16 +215,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [fetchSiteSettingsData, fetchConversations]);
 
-  useEffect(() => {
-    fetchGlobalData();
-    const channel = supabase.channel('site-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: 'id=eq.global' }, () => {
-        fetchSiteSettingsData();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchGlobalData, fetchSiteSettingsData]);
-
   // --- 4. System Action Helpers ---
 
   const pushNotification = useCallback((message: string, type: 'lead' | 'system' | 'update' = 'system', title?: string) => {
@@ -239,6 +229,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       link: '#'
     }, ...prev]);
   }, []);
+
+  useEffect(() => {
+    fetchGlobalData();
+    
+    // Multi-table real-time sync
+    const channel = supabase.channel('dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: 'id=eq.global' }, () => {
+        fetchSiteSettingsData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        fetchGlobalData();
+        pushNotification("New Inquiry Received", 'lead', "Lead Capture");
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations' }, () => {
+        fetchConversations();
+        pushNotification("AI Conversation Updated", 'update', "Live Tracking");
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+        // We only fetch conversations to update activity badges, 
+        // specific message updates are handled within ConversationViewer components usually
+        fetchConversations();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchGlobalData, fetchSiteSettingsData, fetchConversations, pushNotification]);
 
   const logActivity = useCallback(async (action: string, targetType: string, targetId?: string, details?: Record<string, unknown>) => {
     try {
@@ -274,12 +290,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateSectionArray = useCallback((section: keyof Content, fieldPath: string, newArray: unknown[]) => {
     setWebsiteDraft(prev => {
       const newContent = { ...prev.siteContent };
-      const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
-      const keys = fieldPath.split('.');
-      let current: Record<string, unknown> = sectionData;
-      for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]] as Record<string, unknown>; }
-      current[keys[keys.length - 1]] = newArray;
-      (newContent[section] as unknown) = sectionData;
+      
+      if (!fieldPath) {
+        // Direct top-level array update (e.g., socials)
+        (newContent[section] as unknown) = newArray;
+      } else {
+        const sectionData = JSON.parse(JSON.stringify(newContent[section])) as Record<string, unknown>;
+        const keys = fieldPath.split('.');
+        let current: Record<string, unknown> = sectionData;
+        for (let i = 0; i < keys.length - 1; i++) { 
+          current = current[keys[i]] as Record<string, unknown>; 
+        }
+        current[keys[keys.length - 1]] = newArray;
+        (newContent[section] as unknown) = sectionData;
+      }
+      
       return { ...prev, siteContent: newContent };
     });
   }, []);
