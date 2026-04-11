@@ -42,6 +42,7 @@ const SocialIcon = ({ platform, link, brandColor }: { platform: string; link: st
 export const LaptopSection = ({ lang }: LaptopSectionProps) => {
   const { siteContent } = useAdmin();
   const [view, setView] = useState<ViewState>('home');
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const isExpanded = view !== 'home';
   const { laptop, socials } = siteContent;
   const sectionRef = useRef<HTMLElement>(null);
@@ -80,6 +81,47 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
       className="relative min-h-[120vh] bg-primary-black py-20 flex flex-col items-center justify-center -mt-20 md:-mt-32 overflow-hidden"
     >
        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1800px] h-[1800px] bg-accent-violet/3 rounded-full blur-[350px] pointer-events-none" />
+
+      {/* Profile Image Modal - Premium Frame */}
+      <AnimatePresence>
+        {isImageModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
+            onClick={() => setIsImageModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 20 }}
+              className="relative max-w-2xl w-full aspect-square p-2 bg-white/5 border border-white/10 rounded-[40px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Inner Frame Styling */}
+              <div className="absolute inset-0 bg-linear-to-b from-white/10 to-transparent pointer-events-none" />
+              <img 
+                src={profileImg} 
+                className="w-full h-full object-cover rounded-[32px] shadow-2xl" 
+                alt="Profile Large" 
+              />
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setIsImageModalOpen(false)}
+                className="absolute top-6 right-6 w-12 h-12 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition-all"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-white/50 text-xs font-mono tracking-widest uppercase">
+                Secure Viewer Active
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative w-full h-full flex flex-col items-center shrink-0">
         <motion.h2 
@@ -159,10 +201,22 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
                                 <motion.div 
                                   animate={{ scale: [1, 1.05, 1] }}
                                   transition={{ duration: 5, repeat: Infinity }}
-                                  className="relative mb-2 sm:mb-8 w-12 h-12 sm:w-28 sm:h-28 p-0.5 bg-linear-to- from-accent-violet/20 to-white/5 rounded-full"
+                                  onClick={() => setIsImageModalOpen(true)}
+                                  className="group relative mb-2 sm:mb-8 w-12 h-12 sm:w-28 sm:h-28 p-0.5 bg-linear-to- from-accent-violet/20 to-white/5 rounded-full cursor-pointer overflow-visible"
                                 >
                                    <div className="absolute inset-0 bg-accent-violet/10 rounded-full blur-[15px] sm:blur-2xl" />
-                                   <img src={profileImg} className="relative w-full h-full rounded-full border border-white/10 bg-gh-dark object-cover z-10" />
+                                   <img src={profileImg} className="relative w-full h-full rounded-full border border-white/10 bg-gh-dark object-cover z-10 transition-transform duration-500 group-hover:scale-110" />
+                                   
+                                   {/* Hint Notification (Pulsing) */}
+                                   <motion.div
+                                      initial={{ opacity: 0, x: 20 }}
+                                      animate={{ opacity: [0, 1, 1, 0], x: [20, 10, 10, 20] }}
+                                      transition={{ duration: 4, repeat: Infinity, times: [0, 0.2, 0.8, 1] }}
+                                      className="absolute left-full top-1/2 -translate-y-1/2 ml-4 whitespace-nowrap bg-accent-violet/90 text-white text-[5px] sm:text-[7px] font-black uppercase px-2 py-1 rounded-sm tracking-[0.2em] shadow-lg pointer-events-none"
+                                   >
+                                      {lang === 'ar' ? 'انقر للتوسيع' : 'Click to Expand'}
+                                   </motion.div>
+
                                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-4 sm:h-4 bg-accent-violet rounded-full border border-black flex items-center justify-center z-20">
                                       <Sparkles className="w-2 h-2 text-white" />
                                    </div>
