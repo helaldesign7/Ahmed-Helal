@@ -140,9 +140,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const s = data.content as Partial<WebsiteState>;
 
         const newState: WebsiteState = {
-          appearance: s.appearance || initialWebsiteState.appearance,
-          config: s.config || initialWebsiteState.config,
-          siteContent: s.siteContent || initialWebsiteState.siteContent,
+          appearance: { ...initialWebsiteState.appearance, ...(s.appearance || {}) },
+          config: { ...initialWebsiteState.config, ...(s.config || {}) },
+          siteContent: { 
+            ...initialWebsiteState.siteContent, 
+            ...(s.siteContent || {}),
+            // Ensure nested objects like laptop are also merged
+            laptop: { 
+              ...initialWebsiteState.siteContent.laptop, 
+              ...(s.siteContent?.laptop || {}) 
+            }
+          },
           sections: s.sections || initialWebsiteState.sections
         };
 
