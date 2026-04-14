@@ -89,7 +89,7 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
+            className="fixed inset-0 z-999 flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
             onClick={() => setIsImageModalOpen(false)}
           >
             <motion.div

@@ -100,6 +100,11 @@ export interface Content {
     url: string;
     isActive: boolean;
   }[];
+  footer: {
+    brandName: { en: string; ar: string };
+    role: { en: string; ar: string };
+    extraDetails: { en: string; ar: string };
+  };
 }
 
 export const content: Content = {
@@ -368,7 +373,12 @@ export const content: Content = {
     { id: '7', platform: 'pinterest', url: 'https://pinterest.com/ahmedhelal', isActive: true },
     { id: '8', platform: 'linkedin', url: 'https://linkedin.com/in/ahmedhelal', isActive: true },
     { id: '9', platform: 'github', url: 'https://github.com/ahmedhelal', isActive: false },
-  ]
+  ],
+  footer: {
+    brandName: { en: "AHMED HELAL", ar: "أحمد هلال" },
+    role: { en: "Visual Designer & Experience Specialist", ar: "مصمم بصري وأخصائي تجربة المستخدم" },
+    extraDetails: { en: "Crafting premium digital ecosystems through cinematic design.", ar: "صناعة أنظمة بصرية رقمية متميزة من خلال التصميم السينمائي." }
+  }
 };
 
 export const initialContent = content;

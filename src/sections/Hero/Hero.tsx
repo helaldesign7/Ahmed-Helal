@@ -164,35 +164,41 @@ export const Hero = ({ lang }: HeroProps) => {
         transition={springConfig}
         className="relative z-20 text-center max-w-5xl"
       >
-        <motion.div
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="mb-8"
-        >
-          <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
-             <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(var(--accent-rgb),1)] animate-pulse" />
-             <span className="text-[10px] md:text-xs font-mono font-black tracking-[0.4em] uppercase text-white/40">
-               {hero?.badge?.[lang] || hero?.badge?.en || 'VISUAL DESIGNER'}
-             </span>
-          </div>
-        </motion.div>
+        {hero?.badge?.[lang] && (
+          <motion.div
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="mb-8"
+          >
+            <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
+               <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(var(--accent-rgb),1)] animate-pulse" />
+               <span className="text-[10px] md:text-xs font-mono font-black tracking-[0.4em] uppercase text-white/40">
+                 {hero.badge[lang]}
+               </span>
+            </div>
+          </motion.div>
+        )}
 
-        <motion.h1 
-          whileHover={{ scale: 1.02 }}
-          transition={springConfig}
-          className="text-7xl md:text-[140px] font-heading font-black mb-8 tracking-tighter text-white uppercase leading-[0.85] select-none"
-        >
-          {hero?.title?.[lang] || hero?.title?.en || 'Ahmed Helal'}
-        </motion.h1>
+        {(hero?.title?.[lang] || hero?.title?.en) && (
+          <motion.h1 
+            whileHover={{ scale: 1.02 }}
+            transition={springConfig}
+            className="text-7xl md:text-[140px] font-heading font-black mb-8 tracking-tighter text-white uppercase leading-[0.85] select-none"
+          >
+            {hero?.title?.[lang] || hero?.title?.en}
+          </motion.h1>
+        )}
 
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1.2 }}
-          className="text-lg md:text-2xl text-white/30 mb-20 max-w-3xl mx-auto leading-relaxed font-sans font-light"
-        >
-          {hero?.subtitle?.[lang] || hero?.subtitle?.en || ''}
-        </motion.p>
+        {hero?.subtitle?.[lang] && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 1.2 }}
+            className="text-lg md:text-2xl text-white/30 mb-20 max-w-3xl mx-auto leading-relaxed font-sans font-light"
+          >
+            {hero.subtitle[lang]}
+          </motion.p>
+        )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-10 mt-8">
             <Button

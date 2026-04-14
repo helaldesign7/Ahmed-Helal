@@ -49,7 +49,11 @@ export const AppearanceSettings = () => {
         logoLabel: 'Website Logo',
         logoHint: 'Recommended: Transparent PNG or SVG',
         faviconLabel: 'Browser Tab Icon (Favicon)',
-        faviconHint: 'Recommended: 32x32 PNG or ICO'
+        faviconHint: 'Recommended: 32x32 PNG or ICO',
+        ogLabel: 'Social Preview Image (OG Image)',
+        ogHint: 'Recommended: 1200x630px JPG or PNG',
+        metaTitleLabel: 'Social Sharing Title',
+        metaDescLabel: 'Social Sharing Description'
       }
     },
     ar: {
@@ -89,7 +93,11 @@ export const AppearanceSettings = () => {
         logoLabel: 'شعار الموقع (Logo)',
         logoHint: 'يفضل: صيغة PNG شفافة أو SVG',
         faviconLabel: 'أيقونة التبويب (Favicon)',
-        faviconHint: 'يفضل: مقاس 32x32 بصيغة PNG أو ICO'
+        faviconHint: 'يفضل: مقاس 32x32 بصيغة PNG أو ICO',
+        ogLabel: 'صورة معاينة الروابط (OG Image)',
+        ogHint: 'يفضل: مقاس 1200x630 بصيغة JPG أو PNG',
+        metaTitleLabel: 'عنوان الموقع في المشاركة',
+        metaDescLabel: 'وصف الموقع في المشاركة'
       }
     }
   };
@@ -354,6 +362,61 @@ export const AppearanceSettings = () => {
                         className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-accent-violet/50"
                      />
                      <p className="text-[9px] font-mono text-white/20 uppercase text-center">{t[lang].branding.faviconHint}</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-white/5 space-y-6">
+               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-violet">SEO & Social Sharing</h3>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{t[lang].branding.ogLabel}</label>
+                     <div className="p-6 bg-black/50 border border-white/5 rounded-2xl flex flex-col items-center gap-4">
+                        {appearance.ogImageUrl ? (
+                           <div className="relative group w-full text-center">
+                              <img src={appearance.ogImageUrl} alt="Social Preview" className="mx-auto max-h-40 object-contain rounded-xl" />
+                              <button 
+                                 onClick={() => updateAppearance('ogImageUrl', '')}
+                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >×</button>
+                           </div>
+                        ) : (
+                           <div className="w-full aspect-video border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center text-white/10">
+                              <ImageIcon className="w-8 h-8" />
+                           </div>
+                        )}
+                        <input 
+                           type="text" 
+                           placeholder="https://example.com/social-preview.jpg"
+                           value={appearance.ogImageUrl || ''}
+                           onChange={(e) => updateAppearance('ogImageUrl', e.target.value)}
+                           className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-accent-violet/50"
+                        />
+                        <p className="text-[9px] font-mono text-white/20 uppercase text-center">{t[lang].branding.ogHint}</p>
+                     </div>
+                  </div>
+
+                  <div className="space-y-6">
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{t[lang].branding.metaTitleLabel}</label>
+                        <input 
+                           type="text" 
+                           placeholder="Ahmed Helal | Visual Designer"
+                           value={appearance.metaTitle || ''}
+                           onChange={(e) => updateAppearance('metaTitle', e.target.value)}
+                           className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent-violet/50"
+                        />
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{t[lang].branding.metaDescLabel}</label>
+                        <textarea 
+                           placeholder="Crafting immersive digital experiences through cinematic design..."
+                           value={appearance.metaDescription || ''}
+                           onChange={(e) => updateAppearance('metaDescription', e.target.value)}
+                           className="w-full bg-black/50 border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent-violet/50 min-h-[100px] resize-none"
+                        />
+                     </div>
                   </div>
                </div>
             </div>

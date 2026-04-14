@@ -22,6 +22,7 @@ import { DictionaryEditor } from '../components/DictionaryEditor';
 import { TestimonialsManager } from '../components/sub-managers/TestimonialsManager';
 import { ClientLogosManager } from '../components/sub-managers/ClientLogosManager';
 import { SocialLinksManager } from '../components/sub-managers/SocialLinksManager';
+import { FooterManager } from '../components/sub-managers/FooterManager';
 import { useOutletContext } from 'react-router-dom';
 import type { SectionBlueprint, SectionId } from '../../types/admin';
 
@@ -116,7 +117,7 @@ export const ContentSectionsManager = () => {
   const { sections, toggleVisibility, toggleNavbarVisibility, moveSection, setSectionsOrder } = useAdmin();
   const { lang } = useOutletContext<{ lang: 'en' | 'ar' }>();
   const [activeEditor, setActiveEditor] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'testimonials' | 'logos' | 'social' | null>(null);
+  const [activeModal, setActiveModal] = useState<'testimonials' | 'logos' | 'social' | 'footer' | null>(null);
   const [editingLabel, setEditingLabel] = useState<SectionBlueprint | null>(null);
   const { updateSectionLabel } = useAdmin();
 
@@ -171,6 +172,11 @@ export const ContentSectionsManager = () => {
           title: 'Social Icons & Links',
           subtitle: 'External Connectivity Nodes',
           manage: 'Manage'
+        },
+        footer: {
+          title: 'Footer Branding',
+          subtitle: 'Copyright & Role Details',
+          manage: 'Manage'
         }
       },
       layer: 'layer'
@@ -201,6 +207,11 @@ export const ContentSectionsManager = () => {
         social: {
           title: 'أيقونات وروابط التواصل',
           subtitle: 'عقد الاتصال الخارجي',
+          manage: 'إدارة'
+        },
+        footer: {
+          title: 'هوية أسفل الصفحة',
+          subtitle: 'بيانات الحقوق والتخصص',
           manage: 'إدارة'
         }
       },
@@ -310,6 +321,26 @@ export const ContentSectionsManager = () => {
                 </button>
               </div>
            </div>
+
+           <div 
+             className="bg-[#0C0C0C] border border-white/5 rounded-2xl p-6 hover:shadow-[0_0_20px_rgba(139,92,246,0.05)] transition-shadow cursor-pointer"
+             onClick={() => setActiveModal('footer')}
+           >
+              <div className={`flex items-start justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg bg-accent-violet/10 flex items-center justify-center border border-accent-violet/20">
+                    <LayoutList className="w-5 h-5 text-accent-violet" />
+                  </div>
+                  <div className={isRtl ? 'text-right' : ''}>
+                    <h3 className="text-sm font-bold text-white tracking-widest uppercase">{t[lang].subManagers.footer.title}</h3>
+                    <p className="text-[10px] font-mono text-white/40 uppercase mt-1">{t[lang].subManagers.footer.subtitle}</p>
+                  </div>
+                </div>
+                <button className={`text-[10px] font-mono text-accent-violet uppercase hover:underline ${isRtl ? 'rotate-180' : ''}`}>
+                  {t[lang].subManagers.footer.manage} &rarr;
+                </button>
+              </div>
+           </div>
         </div>
       </div>
 
@@ -317,6 +348,7 @@ export const ContentSectionsManager = () => {
       {activeModal === 'testimonials' && <TestimonialsManager lang={lang} onClose={() => setActiveModal(null)} />}
       {activeModal === 'logos' && <ClientLogosManager lang={lang} onClose={() => setActiveModal(null)} />}
       {activeModal === 'social' && <SocialLinksManager lang={lang} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'footer' && <FooterManager lang={lang} onClose={() => setActiveModal(null)} />}
       {/* Label Edit Modal */}
       {editingLabel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">

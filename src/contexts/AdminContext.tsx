@@ -295,6 +295,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, []);
 
+  const updateSection = useCallback(<S extends keyof Content>(section: S, newValue: Content[S]) => {
+    setWebsiteDraft(prev => ({
+      ...prev,
+      siteContent: {
+        ...prev.siteContent,
+        [section]: newValue
+      }
+    }));
+  }, []);
+
   const updateSectionArray = useCallback((section: keyof Content, fieldPath: string, newArray: unknown[]) => {
     setWebsiteDraft(prev => {
       const newContent = { ...prev.siteContent };
@@ -611,7 +621,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
     appearance, siteContent, sections, config, setConfig,
     loading, mediaAssets, setMediaAssets, notifications, setNotifications, stats, activityLogs, conversations,
-    setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
+    setAppearance, updateText, updateSection, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
     moveSection, reorderSections, setSectionsOrder, updateSectionLabel,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,
@@ -622,7 +632,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     projects, leads, crmClients, crmProjects, websiteDraft, persistedWebsiteState, hasUnsavedChanges, saveStatus, saveWebsiteChanges, resetWebsiteChanges,
     appearance, siteContent, sections, config, setConfig,
     loading, mediaAssets, notifications, stats, activityLogs, conversations,
-    setAppearance, updateText, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
+    setAppearance, updateText, updateSection, updateSectionArray, toggleVisibility, toggleNavbarVisibility,
     moveSection, reorderSections, setSectionsOrder, updateSectionLabel,
     addProject, updateProject, deleteProject, reorderProjects, addLead, updateLead, deleteLead,
     addCrmClient, updateCrmClient, deleteCrmClient, addCrmProject, updateCrmProject, deleteCrmProject, reorderCrmProjects,

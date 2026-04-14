@@ -10,17 +10,10 @@ export const Footer = ({ lang }: FooterProps) => {
   const { socials } = siteContent;
   const isRtl = lang === 'ar';
 
-  const t = {
-    en: {
-      role: 'Visual Designer & Experience Specialist',
-      rights: 'ALL RIGHTS RESERVED',
-      brand: 'AHMED HELAL'
-    },
-    ar: {
-      role: 'مصمم بصري وأخصائي تجربة المستخدم',
-      rights: 'جميع الحقوق محفوظة',
-      brand: 'أحمد هلال'
-    }
+  const { brandName, role, extraDetails } = siteContent.footer || {
+    brandName: { en: 'AHMED HELAL', ar: 'أحمد هلال' },
+    role: { en: 'Visual Designer', ar: 'مصمم بصري' },
+    extraDetails: { en: '', ar: '' }
   };
 
   return (
@@ -29,11 +22,18 @@ export const Footer = ({ lang }: FooterProps) => {
           
           <div className={`flex flex-col items-center gap-3 ${isRtl ? 'md:items-end' : 'md:items-start'}`}>
              <div className="font-heading font-black text-3xl tracking-tighter text-white uppercase italic">
-                {t[lang].brand}
+                {brandName[lang] || brandName.en}
              </div>
-             <p className={`text-white/20 text-[10px] font-black uppercase tracking-[0.3em] ${isRtl ? 'font-arabic' : 'font-mono'}`}>
-                {t[lang].role}
-             </p>
+             {role?.[lang] && (
+               <p className={`text-white/20 text-[10px] font-black uppercase tracking-[0.3em] ${isRtl ? 'font-arabic' : 'font-mono'}`}>
+                  {role[lang]}
+               </p>
+             )}
+             {extraDetails?.[lang] && (
+               <p className="text-white/10 text-[9px] max-w-[250px] leading-relaxed uppercase tracking-wider block mt-2 opacity-60">
+                 {extraDetails[lang]}
+               </p>
+             )}
           </div>
           
           <div className={`flex flex-wrap items-center justify-center gap-x-12 gap-y-6 text-[10px] font-black uppercase tracking-[0.3em] text-white/40 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -49,9 +49,9 @@ export const Footer = ({ lang }: FooterProps) => {
                </a>
              ))}
           </div>
-
+ 
           <div className={`text-[9px] font-black uppercase tracking-[0.4em] text-white/10 ${isRtl ? 'font-arabic' : 'font-mono'}`}>
-             © {new Date().getFullYear()} {isRtl ? 'أحمد هلال' : 'AHMED HELAL'} <span className="mx-2">|</span> {t[lang].rights}
+             © {new Date().getFullYear()} {brandName[lang] || brandName.en} <span className="mx-2">|</span> {isRtl ? 'جميع الحقوق محفوظة' : 'ALL RIGHTS RESERVED'}
           </div>
        </div>
     </footer>

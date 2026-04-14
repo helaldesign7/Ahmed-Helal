@@ -113,6 +113,9 @@ export interface Appearance {
   glassmorphism: boolean;
   logoUrl?: string;
   faviconUrl?: string;
+  ogImageUrl?: string;
+  metaTitle?: string;
+  metaDescription?: string;
 }
 
 export interface ServiceItem {
@@ -285,6 +288,7 @@ export interface AdminContextType {
   setConfig: React.Dispatch<React.SetStateAction<AdminConfig>>;
   siteContent: Content;
   updateText: (section: keyof Content, fieldPath: string, lang: 'en' | 'ar' | 'raw', newValue: string) => void;
+  updateSection: <S extends keyof Content>(section: S, newValue: Content[S]) => void;
   updateSectionArray: (section: keyof Content, fieldPath: string, newArray: unknown[]) => void;
   sections: SectionBlueprint[];
   toggleVisibility: (id: SectionId) => void;

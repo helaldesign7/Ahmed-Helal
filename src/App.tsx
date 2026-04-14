@@ -72,8 +72,33 @@ const GlobalTheme = () => {
       link.href = appearance.faviconUrl;
     }
 
-    if (siteContent?.hero?.title?.en) {
-       document.title = siteContent.hero.title.en + " | Portfolio";
+    // 3. Update SEO Meta Tags
+    const updateMeta = (nameOrProperty: string, value: string, isProperty = false) => {
+      const selector = isProperty ? `meta[property="${nameOrProperty}"]` : `meta[name="${nameOrProperty}"]`;
+      let element = document.querySelector(selector);
+      if (!element) {
+        element = document.createElement('meta');
+        if (isProperty) element.setAttribute('property', nameOrProperty);
+        else element.setAttribute('name', nameOrProperty);
+        document.head.appendChild(element);
+      }
+      element.setAttribute('content', value);
+    };
+
+    const siteTitle = appearance.metaTitle || (siteContent?.hero?.title?.en ? `${siteContent.hero.title.en} | Portfolio` : 'Ahmed Helal');
+    const siteDesc = appearance.metaDescription || "Crafting immersive digital experiences through cinematic design.";
+
+    document.title = siteTitle;
+    updateMeta('description', siteDesc);
+    updateMeta('og:title', siteTitle, true);
+    updateMeta('og:description', siteDesc, true);
+    updateMeta('twitter:card', 'summary_large_image');
+    updateMeta('twitter:title', siteTitle);
+    updateMeta('twitter:description', siteDesc);
+
+    if (appearance.ogImageUrl) {
+      updateMeta('og:image', appearance.ogImageUrl, true);
+      updateMeta('twitter:image', appearance.ogImageUrl);
     }
   }, [appearance, siteContent]);
 
