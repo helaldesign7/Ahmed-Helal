@@ -99,6 +99,10 @@ export const Navbar = ({ lang, onLanguageToggle }: NavbarProps) => {
 
   const scrollToSection = (id: string, section: string) => {
     setActiveTab(id);
+    if (section === 'hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const element = document.getElementById(section);
     if (element) {
       const offset = 100;

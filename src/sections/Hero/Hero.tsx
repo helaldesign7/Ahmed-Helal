@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useRef } from 'react';
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
 import { Button } from '../../components/common/Button';
 import { useAdmin } from '../../contexts/useAdmin';
 import type { Language } from '../../data/content';
@@ -7,238 +8,172 @@ interface HeroProps {
   lang: Language;
 }
 
-const FloatingTag = ({ word, index }: { word: string; index: number }) => {
-  const positions = [
-    { x: -450, y: -200, r: -5 },
-    { x: 480, y: -150, r: 8 },
-    { x: -400, y: 150, r: -12 },
-    { x: 500, y: 250, r: 15 },
-    { x: -150, y: -300, r: 3 },
-    { x: 250, y: -280, r: -6 },
-    { x: -500, y: 0, r: 10 },
-    { x: 550, y: 50, r: -10 },
-    { x: -100, y: 350, r: 5 },
-    { x: 100, y: -350, r: -5 },
-    { x: -350, y: -100, r: 20 },
-    { x: 350, y: 100, r: -20 },
-  ];
-
-  const pos = positions[index % positions.length];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ 
-        opacity: [0.1, 0.4, 0.1],
-        x: [pos.x, pos.x + 15, pos.x - 15, pos.x],
-        y: [pos.y, pos.y - 20, pos.y + 20, pos.y],
-        rotate: [pos.r, pos.r + 3, pos.r - 3, pos.r]
-      }}
-      transition={{ 
-        duration: 10 + index, 
-        repeat: Infinity, 
-        ease: "easeInOut" 
-      }}
-      whileHover={{ 
-        scale: 1.1, 
-        opacity: 1,
-        boxShadow: "0 0 40px rgba(var(--accent-rgb), 0.5)",
-        backgroundColor: "rgba(255, 255, 255, 0.1)"
-      }}
-      className="absolute z-10 hidden md:flex items-center px-4 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md cursor-default pointer-events-auto shadow-2xl"
-    >
-      <div className="w-1 h-1 rounded-full bg-accent-violet mr-2 shadow-[0_0_10px_rgba(var(--accent-rgb),1)]" />
-      <span className="text-[9px] font-mono font-black text-white/30 tracking-widest uppercase truncate">{word}</span>
-    </motion.div>
-  );
-};
-
-const FloatingShape = ({ index }: { index: number }) => {
-  const shapes = [
-    "w-2 h-2 rounded-full",
-    "w-3 h-[1px] rotate-45",
-    "w-1 h-4",
-    "w-2 h-2 rotate-45 border border-white/20",
-    "w-2 h-2 rounded-full ring-1 ring-white/10"
-  ];
-  
-  const shapeClass = shapes[index % shapes.length];
-  const driftPaths = [
-    { x: [-100, 200], y: [-50, 150] },
-    { x: [300, -100], y: [100, -200] },
-    { x: [-400, 50], y: [300, 50] },
-    { x: [200, 400], y: [-300, 100] },
-    { x: [-50, -350], y: [400, -50] },
-    { x: [450, 50], y: [-150, 300] },
-  ];
-
-  const path = driftPaths[index % driftPaths.length];
-  
-  return (
-    <motion.div 
-       animate={{ 
-         x: path.x,
-         y: path.y,
-         opacity: [0.1, 0.3, 0.1]
-       }}
-       transition={{ duration: 25 + index * 5, repeat: Infinity, ease: "linear" }}
-       className={`absolute bg-accent-violet/20 blur-[1px] ${shapeClass}`} 
-    />
-  );
-};
-
 export const Hero = ({ lang }: HeroProps) => {
   const { siteContent } = useAdmin();
+  const ref = useRef<HTMLElement>(null);
   
-  // Provide robust fallbacks if siteContent is malformed
+  // 1. Zero-lag smooth parallax using Framer Motion values
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Slower, floatier space-like movement
+  const springConfigParallax = { damping: 60, stiffness: 40, mass: 2.5 };
+  const smoothX = useSpring(mouseX, springConfigParallax);
+  const smoothY = useSpring(mouseY, springConfigParallax);
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (typeof window !== 'undefined') {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      const x = (clientX / innerWidth - 0.5) * -60; // Increased range for deeper parallax
+      const y = (clientY / innerHeight - 0.5) * -60;
+      mouseX.set(x);
+      mouseY.set(y);
+    }
+  };
+
+  // 2. Scroll-based exit animations
+  const { scrollY } = useScroll();
+  const textY = useTransform(scrollY, [0, 400], [0, -100]);
+  const textOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const videoScale = useTransform(scrollY, [0, 800], [1, 1.1]);
+
   const hero = siteContent?.hero || {
-    title: { en: "Ahmed Helal", ar: "أحمد هلال" },
-    subtitle: { en: "Visual Designer", ar: "مصمم بصري" },
-    badge: { en: "Visual Designer", ar: "مصمم بصري" },
+    title: { en: "END OF YEAR\nDESIGN", ar: "تصميم\nنهاية العام" },
+    subtitle: { en: "Crafting immersive digital experiences through cinematic design.", ar: "صناعة تجارب رقمية غامرة من خلال التصميم السينمائي." },
+    badge: { en: "2022 PLAY", ar: "2022 عرض" },
     ctaPrimary: { en: "Start", ar: "ابدأ" },
     ctaSecondary: { en: "Work", ar: "أعمالي" },
-    floatingKeywords: [],
-    background: { type: 'image', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop' }
   };
-  
+
   const marquee = siteContent?.marquee || { logos: [] };
 
-  // Gooey/Viscous transition config
-  const springConfig = { type: "spring", stiffness: 150, damping: 20, mass: 1.2 } as const;
-
-  const bgUrl = hero?.background?.url || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop';
-  const bgType = hero?.background?.type || 'image';
-
   return (
-    <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-20 bg-transparent">
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        {bgType === 'video' ? (
-          <motion.video
-            key={bgUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-            animate={{ scale: [1.05, 1.15, 1.05] }}
-            transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <source src={bgUrl} type="video/mp4" />
-          </motion.video>
-        ) : (
-          <motion.img 
-            key={bgUrl}
-            src={bgUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            animate={{ scale: [1.05, 1.1, 1.05] }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        )}
-
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" />
-        <div className="absolute inset-0 bg-linear-to-b from-black/40 via-transparent to-black" />
-        
-        <motion.div 
-           animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.25, 0.15] }}
-           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-accent-violet/10 rounded-full blur-[200px]" 
-        />
-      </div>
-
-      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none overflow-hidden">
-         <div className="relative w-full max-w-7xl h-full">
-            {(hero?.floatingKeywords || []).map((item: { [key in Language]: string }, i: number) => (
-              <FloatingTag key={i} word={item?.[lang] || item?.en || ''} index={i} />
-            ))}
-            {[...Array(15)].map((_, i) => (
-              <FloatingShape key={i} index={i} />
-            ))}
-         </div>
-      </div>
-
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 50 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={springConfig}
-        className="relative z-20 text-center max-w-5xl"
+    <section 
+      ref={ref} 
+      onPointerMove={handlePointerMove}
+      id="hero" 
+      className="relative w-full h-screen overflow-hidden bg-black"
+    >
+      
+      {/* Video Background with Parallax & Scroll Scale */}
+      <motion.div 
+        className="absolute inset-[-10%] w-[120%] h-[120%] z-0 pointer-events-none"
+        style={{ x: smoothX, y: smoothY, scale: videoScale, willChange: 'transform' }}
       >
-        {hero?.badge?.[lang] && (
-          <motion.div
-            animate={{ y: [0, -10, 0] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="mb-8"
-          >
-            <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
-               <div className="w-1.5 h-1.5 rounded-full bg-accent-violet shadow-[0_0_10px_rgba(var(--accent-rgb),1)] animate-pulse" />
-               <span className="text-[10px] md:text-xs font-mono font-black tracking-[0.4em] uppercase text-white/40">
-                 {hero.badge[lang]}
-               </span>
-            </div>
-          </motion.div>
-        )}
-
-        {(hero?.title?.[lang] || hero?.title?.en) && (
-          <motion.h1 
-            whileHover={{ scale: 1.02 }}
-            transition={springConfig}
-            className="text-7xl md:text-[140px] font-heading font-black mb-8 tracking-tighter text-white uppercase leading-[0.85] select-none"
-          >
-            {hero?.title?.[lang] || hero?.title?.en}
-          </motion.h1>
-        )}
-
-        {hero?.subtitle?.[lang] && (
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 1.2 }}
-            className="text-lg md:text-2xl text-white/30 mb-20 max-w-3xl mx-auto leading-relaxed font-sans font-light"
-          >
-            {hero.subtitle[lang]}
-          </motion.p>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-10 mt-8">
-            <Button
-              variant="primary"
-              className="w-full sm:w-auto h-20 px-24 text-[12px] shadow-[0_0_50px_rgba(var(--accent-rgb),0.3)] hover:shadow-[0_0_80px_rgba(var(--accent-rgb),0.5)]"
-              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              {hero?.ctaPrimary?.[lang] || hero?.ctaPrimary?.en || 'Start'}
-            </Button>
-
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto h-20 px-16 text-[12px] border-white/10 hover:border-white/30"
-              onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              {hero?.ctaSecondary?.[lang] || hero?.ctaSecondary?.en || 'Work'}
-            </Button>
-        </div>
+        <video
+          key={hero.background?.url || "/hero-bg.mp4"}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className={`w-full h-full object-cover ${lang === 'ar' ? '-scale-x-100' : ''}`}
+        >
+          <source src={hero.background?.url || "/hero-bg.mp4"} type="video/mp4" />
+        </video>
+        {/* Lighter overlays for better video details */}
+        <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
       </motion.div>
 
-      {/* Corporate Marquee (Permanent Motion Loop) */}
-      <div className="absolute bottom-16 w-full overflow-hidden pointer-events-none opacity-20 hover:opacity-50 transition-opacity">
-         <div className="flex w-fit animate-marquee grayscale invert gap-24 pr-24">
-            {[...(marquee?.logos || []), ...(marquee?.logos || []), ...(marquee?.logos || [])].map((logo, i) => (
-              <img key={i} src={logo?.image} alt={logo?.name} className="h-4 md:h-6 object-contain shrink-0" />
-            ))}
-         </div>
-         
-         <style>{`
-            @keyframes marquee {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-33.33%); }
-            }
-            .animate-marquee {
-              animation: marquee 40s linear infinite;
-            }
-         `}</style>
-      </div>
+      {/* Main Content Container */}
+      <motion.div 
+        style={{ y: textY, opacity: textOpacity }}
+        className="relative z-10 w-full h-full flex flex-col justify-center px-8 md:px-24"
+      >
+        <motion.div
+          initial={{ opacity: 0, x: -50, filter: 'blur(10px)' }}
+          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+          className="max-w-2xl"
+        >
+          {hero?.title && (
+             <h1 className="text-5xl md:text-8xl font-black mb-6 tracking-tight text-white uppercase leading-[1.1]">
+                {hero.title[lang]?.split('\n').map((line: string, i: number) => (
+                   <span key={i} className="block">{line}</span>
+                ))}
+             </h1>
+          )}
 
-      <div className="absolute bottom-0 left-0 w-full h-64 bg-linear-to-t from-black to-transparent pointer-events-none" />
+          {hero?.badge?.[lang] && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex items-center gap-6 mb-8 mt-2"
+            >
+               <span className="text-sm md:text-xl font-mono font-bold tracking-[0.2em] uppercase text-white/90 border-b-2 border-white/40 pb-2">
+                 {hero.badge[lang]}
+               </span>
+               <div className="flex gap-2 text-[10px] md:text-xs font-mono text-white/70 tracking-widest">
+                  {lang === 'ar' ? (
+                     <><span>تصميم</span> • <span>ابداع</span></>
+                  ) : (
+                     <><span>DESIGN</span> • <span>INNOVATION</span></>
+                  )}
+               </div>
+            </motion.div>
+          )}
+
+          {hero?.subtitle?.[lang] && (
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.6 }}
+              className="text-sm md:text-lg text-white/80 mb-12 max-w-xl leading-relaxed font-sans font-light"
+            >
+              {hero.subtitle[lang]}
+            </motion.p>
+          )}
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="flex flex-col sm:flex-row items-center gap-6"
+          >
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto h-14 md:h-16 px-12 md:px-16 text-xs md:text-sm shadow-[0_0_40px_rgba(var(--accent-rgb),0.5)] hover:shadow-[0_0_60px_rgba(var(--accent-rgb),0.8)] transition-shadow duration-300"
+                onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                {hero?.ctaPrimary?.[lang] || 'Start'}
+              </Button>
+
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto h-14 md:h-16 px-10 md:px-12 text-xs md:text-sm border-white/30 hover:border-white/60 bg-white/10 backdrop-blur-md transition-all duration-300"
+                onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                {hero?.ctaSecondary?.[lang] || 'Work'}
+              </Button>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Marquee at bottom - Subtle */}
+      {marquee?.logos && marquee.logos.length > 0 && (
+        <motion.div 
+          style={{ opacity: textOpacity }}
+          className="absolute bottom-12 w-full overflow-hidden pointer-events-none opacity-30 hover:opacity-60 transition-opacity z-20"
+        >
+           <div className="flex w-fit animate-marquee grayscale invert gap-24 pr-24">
+              {[...marquee.logos, ...marquee.logos, ...marquee.logos].map((logo, i) => (
+                <img key={i} src={logo?.image} alt={logo?.name} className="h-4 md:h-6 object-contain shrink-0 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
+              ))}
+           </div>
+           
+           <style>{`
+              @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-33.33%); }
+              }
+              .animate-marquee {
+                animation: marquee 40s linear infinite;
+              }
+           `}</style>
+        </motion.div>
+      )}
     </section>
   );
 };
