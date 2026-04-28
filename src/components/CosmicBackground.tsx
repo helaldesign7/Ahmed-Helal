@@ -43,8 +43,8 @@ const CosmicBackground: React.FC = () => {
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1] bg-primary-black">
             {/* Soft Ambient Nebula Glows */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent-violet/5 blur-[120px] rounded-full animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full animate-pulse-slow" />
+            <div className="hidden md:block absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent-violet/5 blur-[120px] rounded-full animate-pulse" />
+            <div className="hidden md:block absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full animate-pulse-slow" />
 
             {/* Static Content Overlay - Fine Grid */}
             <div 

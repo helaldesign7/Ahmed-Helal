@@ -85,8 +85,8 @@ export const StartProject = ({ lang }: StartProjectProps) => {
       className={`min-h-[100dvh] py-32 px-6 relative bg-primary-black overflow-hidden flex items-center ${isRtl ? 'rtl font-arabic text-right' : 'ltr'}`}
     >
       {/* Background Elements */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent-violet/10 blur-[200px] -z-10 animate-pulse" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-accent-violet/5 blur-[200px] -z-10" />
+      <div className="hidden md:block absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent-violet/10 blur-[200px] -z-10 animate-pulse" />
+      <div className="hidden md:block absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-accent-violet/5 blur-[200px] -z-10" />
 
       <div className="max-w-7xl mx-auto w-full relative z-10">
         <AnimatePresence mode="wait">

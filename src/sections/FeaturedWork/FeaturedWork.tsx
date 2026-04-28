@@ -31,7 +31,7 @@ export const FeaturedWork = ({ lang, id }: FeaturedWorkProps) => {
     <section id={id} className="py-24 px-6 md:px-12 bg-transparent relative overflow-hidden">
       
       {/* Background Decorative Element */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-violet/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      <div className="hidden md:block absolute top-0 right-0 w-[500px] h-[500px] bg-accent-violet/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">

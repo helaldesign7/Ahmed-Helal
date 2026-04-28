@@ -67,7 +67,7 @@ export const Metrics = ({ lang }: MetricsProps) => {
   return (
     <section className="py-64 px-6 md:px-12 bg-transparent relative overflow-hidden">
        {/* Background Atmospheric Flare */}
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent-violet/5 rounded-full blur-[250px] pointer-events-none" />
+       <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent-violet/5 rounded-full blur-[250px] pointer-events-none" />
 
        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-16">

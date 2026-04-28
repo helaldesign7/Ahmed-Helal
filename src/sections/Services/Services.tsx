@@ -122,8 +122,8 @@ export const Services = ({ lang }: ServicesProps) => {
   return (
     <section className="py-72 px-6 md:px-12 bg-transparent relative overflow-hidden">
        {/* Ambient Space Haze */}
-       <div className="absolute top-1/4 left-1/4 w-[1000px] h-[1000px] bg-accent-violet/2 rounded-full blur-[300px] pointer-events-none" />
-       <div className="absolute bottom-1/4 right-1/4 w-[800px] h-[800px] bg-accent-blue/2 rounded-full blur-[250px] pointer-events-none" />
+       <div className="hidden md:block absolute top-1/4 left-1/4 w-[1000px] h-[1000px] bg-accent-violet/2 rounded-full blur-[300px] pointer-events-none" />
+       <div className="hidden md:block absolute bottom-1/4 right-1/4 w-[800px] h-[800px] bg-accent-blue/2 rounded-full blur-[250px] pointer-events-none" />
 
        <div className="max-w-6xl mx-auto flex flex-col items-center">
           <div className={`mb-56 ${lang === 'ar' ? 'pr-8 self-start' : 'pl-8 self-start'}`}>

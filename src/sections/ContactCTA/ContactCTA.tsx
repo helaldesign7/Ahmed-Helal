@@ -16,7 +16,7 @@ export const ContactCTA = ({ lang, id }: ContactCTAProps) => {
   return (
     <section id={id} className="py-24 px-6 md:px-12 bg-transparent relative overflow-hidden">
        {/* Background Impact Glow */}
-       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-accent-violet/10 blur-[150px] rounded-full translate-y-1/2" />
+       <div className="hidden md:block absolute inset-x-0 bottom-0 h-1/2 bg-accent-violet/10 blur-[150px] rounded-full translate-y-1/2" />
 
        <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.h2
