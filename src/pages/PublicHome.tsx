@@ -30,11 +30,14 @@ export const PublicHome: FC = () => {
   const smoothCursorY = useSpring(cursorY, springConfig);
 
   useEffect(() => {
+    // Extremely important: completely disable cursor tracking on mobile/touch devices
+    if (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768) return;
+
     const handleMouseMove = (e: MouseEvent) => {
       cursorX.set(e.clientX - 16); 
       cursorY.set(e.clientY - 16);
     };
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [cursorX, cursorY]);
 

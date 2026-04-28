@@ -23,6 +23,8 @@ export const Hero = ({ lang }: HeroProps) => {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (typeof window !== 'undefined') {
+      if (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768) return;
+      
       const { clientX, clientY } = e;
       const { innerWidth, innerHeight } = window;
       const x = (clientX / innerWidth - 0.5) * -60; // Increased range for deeper parallax
@@ -58,8 +60,8 @@ export const Hero = ({ lang }: HeroProps) => {
       
       {/* Video Background with Parallax & Scroll Scale */}
       <motion.div 
-        className="absolute inset-[-10%] w-[120%] h-[120%] z-0 pointer-events-none"
-        style={{ x: smoothX, y: smoothY, scale: videoScale, willChange: 'transform' }}
+        className="absolute inset-[-10%] w-[120%] h-[120%] z-0 pointer-events-none md:will-change-transform"
+        style={{ x: smoothX, y: smoothY, scale: videoScale }}
       >
         <video
           key={hero.background?.url || "/hero-bg.mp4"}
@@ -165,11 +167,12 @@ export const Hero = ({ lang }: HeroProps) => {
            
            <style>{`
               @keyframes marquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-33.33%); }
+                0% { transform: translate3d(0, 0, 0); }
+                100% { transform: translate3d(-33.33%, 0, 0); }
               }
               .animate-marquee {
                 animation: marquee 40s linear infinite;
+                will-change: transform;
               }
            `}</style>
         </motion.div>

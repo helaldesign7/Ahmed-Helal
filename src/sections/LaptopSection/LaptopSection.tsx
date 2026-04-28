@@ -80,7 +80,7 @@ export const LaptopSection = ({ lang }: LaptopSectionProps) => {
       style={{ position: 'relative' }}
       className="relative min-h-[120vh] bg-primary-black py-20 flex flex-col items-center justify-center -mt-20 md:-mt-32 overflow-hidden"
     >
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1800px] h-[1800px] bg-accent-violet/3 rounded-full blur-[350px] pointer-events-none" />
+       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] max-w-[1000px] max-h-[1000px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, rgba(0,0,0,0) 70%)' }} />
 
       {/* Profile Image Modal - Premium Frame */}
       <AnimatePresence>
