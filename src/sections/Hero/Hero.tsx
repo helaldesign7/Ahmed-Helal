@@ -55,7 +55,7 @@ export const Hero = ({ lang }: HeroProps) => {
       ref={ref} 
       onPointerMove={handlePointerMove}
       id="hero" 
-      className="relative w-full h-[100dvh] overflow-hidden bg-black"
+      className="relative w-full h-dvh overflow-hidden bg-black"
     >
       
       {/* Video Background with Parallax & Scroll Scale */}
