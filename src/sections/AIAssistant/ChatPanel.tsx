@@ -356,7 +356,7 @@ Constraint: Respond under 100 words. Speak naturally but technically sound.
       initial={{ opacity: 0, y: 50, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 50, scale: 0.95 }}
-      className={`fixed bottom-20 md:bottom-28 right-4 md:right-10 w-[calc(100vw-2rem)] sm:w-[400px] h-[75vh] md:h-[600px] z-50 flex flex-col bg-primary-black/95 backdrop-blur-3xl border border-white/10 rounded-3xl sm:rounded-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden ${
+      className={`fixed bottom-20 md:bottom-28 right-4 md:right-10 w-[calc(100vw-2rem)] sm:w-[400px] h-[75vh] md:h-[600px] z-50 flex flex-col bg-primary-black/95 backdrop-blur-xl border border-white/10 rounded-3xl sm:rounded-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden ${
         isRtl ? 'text-right' : 'text-left'
       }`}
     >

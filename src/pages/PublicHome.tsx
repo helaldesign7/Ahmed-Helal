@@ -60,7 +60,7 @@ export const PublicHome: FC = () => {
 
   return (
     <main 
-      className={`min-h-screen text-white selection:bg-accent-violet/30 cursor-none [&_a]:cursor-none [&_button]:cursor-none ${lang === 'ar' ? 'rtl font-arabic' : 'ltr uppercase-none'}`}
+      className={`min-h-[100dvh] text-white selection:bg-accent-violet/30 cursor-none [&_a]:cursor-none [&_button]:cursor-none ${lang === 'ar' ? 'rtl font-arabic' : 'ltr uppercase-none'}`}
     >
       <motion.div 
         className="fixed top-0 left-0 w-8 h-8 rounded-full border border-accent-violet/60 pointer-events-none z-9999 items-center justify-center mix-blend-screen shadow-[0_0_15px_rgba(var(--accent-rgb),0.3)] hidden md:flex"
@@ -84,7 +84,7 @@ export const PublicHome: FC = () => {
             id={section.id}
             className={
               section.id === 'hero' 
-                ? 'sticky top-0 h-screen z-0 overflow-hidden' 
+                ? 'sticky top-0 h-[100dvh] z-0 overflow-hidden' 
                 : 'relative z-10 bg-primary-black shadow-[0_-30px_60px_rgba(0,0,0,0.6)]'
             }
           >

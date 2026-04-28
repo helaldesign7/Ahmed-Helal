@@ -35,7 +35,7 @@ const CountUp = ({ value, label }: { value: string; label: string }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-      className="text-center group p-12 md:p-16 rounded-[40px] bg-gh-dark/50 backdrop-blur-3xl border border-white/5 hover:border-accent-violet transition-all duration-700 hover:shadow-[0_20px_100px_rgba(139,92,246,0.1)] relative overflow-hidden"
+      className="text-center group p-12 md:p-16 rounded-[40px] bg-gh-dark/50 backdrop-blur-md border border-white/5 hover:border-accent-violet transition-all duration-700 hover:shadow-[0_20px_100px_rgba(139,92,246,0.1)] relative overflow-hidden"
     >
        <div className="absolute inset-0 bg-linear-to-b from-accent-violet/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

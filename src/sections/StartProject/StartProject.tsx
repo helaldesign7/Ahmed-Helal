@@ -82,7 +82,7 @@ export const StartProject = ({ lang }: StartProjectProps) => {
     <section 
       ref={sectionRef}
       id="start-project" 
-      className={`min-h-screen py-32 px-6 relative bg-primary-black overflow-hidden flex items-center ${isRtl ? 'rtl font-arabic text-right' : 'ltr'}`}
+      className={`min-h-[100dvh] py-32 px-6 relative bg-primary-black overflow-hidden flex items-center ${isRtl ? 'rtl font-arabic text-right' : 'ltr'}`}
     >
       {/* Background Elements */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-accent-violet/10 blur-[200px] -z-10 animate-pulse" />
@@ -140,7 +140,7 @@ export const StartProject = ({ lang }: StartProjectProps) => {
 
               {/* Right Column: Form */}
               <div className="lg:col-span-3">
-                <div className="p-8 md:p-14 rounded-[3rem] bg-[#0A0A0A]/40 border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] space-y-12 relative overflow-hidden backdrop-blur-3xl">
+                <div className="p-8 md:p-14 rounded-[3rem] bg-[#0A0A0A]/40 border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] space-y-12 relative overflow-hidden backdrop-blur-lg">
                   {/* Glassmorphism Accents */}
                   <div className="absolute top-0 right-0 w-80 h-80 bg-accent-violet/5 blur-3xl -z-10" />
                   <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-accent-violet/5 blur-3xl -z-10" />

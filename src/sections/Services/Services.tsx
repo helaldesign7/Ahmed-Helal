@@ -50,7 +50,7 @@ const ServiceCard = ({
        {/* Heavy Glass Frosting (Deeper when out of focus) */}
        <motion.div 
          style={{ opacity: useTransform(blurValue, [0, 15], [0, 0.6]) }}
-         className="absolute inset-0 bg-white/2 backdrop-blur-3xl rounded-[50px] z-20 pointer-events-none border border-white/5" 
+         className="absolute inset-0 bg-white/2 backdrop-blur-md rounded-[50px] z-20 pointer-events-none border border-white/5" 
        />
 
        <motion.div

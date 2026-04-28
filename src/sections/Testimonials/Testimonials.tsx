@@ -46,7 +46,7 @@ export const Testimonials = ({ lang }: TestimonialsProps) => {
                    key={index}
                    className={cn(
                      "relative p-8 md:p-10 rounded-4xl w-[350px] md:w-[450px] shrink-0",
-                     "bg-gh-dark/40 backdrop-blur-3xl border border-white/5",
+                     "bg-gh-dark/40 backdrop-blur-lg border border-white/5",
                      "transition-all duration-500 hover:bg-gh-dark/60 hover:border-accent-violet/30 hover:-translate-y-2 hover:shadow-[0_10px_40px_-10px_rgba(139,92,246,0.3)]",
                      lang === 'ar' ? 'rtl text-right' : 'ltr text-left'
                    )}
