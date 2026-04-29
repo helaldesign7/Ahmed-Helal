@@ -20,8 +20,8 @@ export const handler: Handler = async (event) => {
 
     // 1. Initialize Supabase Admin Client
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    // Strictly require SERVICE_ROLE_KEY to bypass RLS
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Use SERVICE_ROLE_KEY if available, otherwise fallback to ANON_KEY (RLS allows public inserts)
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase Environment Variables setup in Netlify');
@@ -37,19 +37,16 @@ export const handler: Handler = async (event) => {
       whatsapp: whatsapp?.trim() || '',
       company: company?.trim() || 'Individual',
       interest: serviceType || '',
-      servicetype: serviceType || '',
       projecttitle: projectTitle?.trim() || 'New Project Inquiry',
       description: description.trim(),
       budget: budget || '',
       timeline: timeline || '',
-      session_id: data.session_id || '', // Link to AI conversation
       status: 'pending',
-      date: new Date().toISOString(),
-      source: 'Internal API (Netlify)'
+      date: new Date().toISOString()
     };
 
     // 3. Insert into Supabase First
-    const { data: dbData, error: dbError } = await supabase.from('leads').insert([payload]).select();
+    const { error: dbError } = await supabase.from('leads').insert([payload]);
 
     if (dbError) {
       console.error('SUPABASE INSERT ERROR:', dbError);
@@ -134,8 +131,7 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({ 
         success: true, 
         emailSent, 
-        message: emailSent ? 'Lead captured and notification sent' : 'Lead captured successfully but email delivery failed',
-        leadId: dbData?.[0]?.id
+        message: emailSent ? 'Lead captured and notification sent' : 'Lead captured successfully but email delivery failed'
       }),
     };
 
